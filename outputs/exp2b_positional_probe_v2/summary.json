@@ -1,0 +1,38 @@
+{
+  "64": {
+    "global_nope": {
+      "train_acc_mean": 1.0,
+      "test_acc_mean": 0.5244140625,
+      "overfit_gap_mean": 0.4755859375
+    },
+    "swa": {
+      "train_acc_mean": 1.0,
+      "test_acc_mean": 0.5201822916666666,
+      "overfit_gap_mean": 0.4798177083333333
+    }
+  },
+  "128": {
+    "global_nope": {
+      "train_acc_mean": 0.9999791666666666,
+      "test_acc_mean": 0.5536295572916667,
+      "overfit_gap_mean": 0.446349609375
+    },
+    "swa": {
+      "train_acc_mean": 0.9998888888888889,
+      "test_acc_mean": 0.552029079861111,
+      "overfit_gap_mean": 0.44785980902777783
+    }
+  },
+  "256": {
+    "global_nope": {
+      "train_acc_mean": 1.0,
+      "test_acc_mean": 0.5446875,
+      "overfit_gap_mean": 0.4553125
+    },
+    "swa": {
+      "train_acc_mean": 0.9979097222222223,
+      "test_acc_mean": 0.5422291666666667,
+      "overfit_gap_mean": 0.4556805555555556
+    }
+  }
+}
