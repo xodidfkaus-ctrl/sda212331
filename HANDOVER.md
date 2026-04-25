@@ -218,10 +218,25 @@ sda212331/
 │   │                                     ⚠️ CONFIG_MAPPING 패치 포함 — 반드시 이걸로 로드
 │   │                                     load_model_and_tokenizer(): attn_implementation='eager' 강제
 │   │                                     get_global_layer_indices(), get_swa_layer_indices()
+│   ├── analysis/
+│   │   └── statistical_tests.py      ← 통계 검정 유틸리티
+│   │                                    compare_groups(): Welch t-test + Cohen's d + bootstrap CI
+│   │                                    analyze_jsonl(): 실험 results.jsonl 직접 분석
+│   ├── corpus/
+│   │   └── downloader.py             ← 실제 텍스트 코퍼스 다운로더
+│   │                                    WikiText-103(영어) / KLUE-MRC(한국어) 자동 다운로드+캐시
+│   │                                    build_input_from_corpus(): 실험용 토큰 텐서 생성
 │   └── experiments/
 │       ├── exp1_attention_entropy.py  ← Exp 1: 짧은 입력(14~26 토큰) entropy 측정 [완료]
-│       ├── exp1b_long_input.py        ← Exp 1b: 긴 입력(128~2048 토큰) entropy 측정 [실행중/완료]
-│       └── exp2_positional_probe.py   ← Exp 2: 레이어별 위치 정보 linear probe [완료]
+│       ├── exp1b_long_input.py        ← Exp 1b: 긴 입력(128~2048 토큰) entropy 측정 [완료]
+│       ├── exp2_positional_probe.py   ← Exp 2: 레이어별 위치 정보 linear probe [완료]
+│       ├── exp2b_positional_probe_v2.py ← Exp 2b: probe 개선판 (train/test split, 30개 프롬프트) [실행 예정]
+│       ├── exp3_swa_ablation.py       ← Exp 3: Global attention output 제거 ablation [실행 예정]
+│       ├── exp3b_swa_mask_ablation.py ← Exp 3b: ⭐ SWA 마스크 주입 ablation (방법론 개선판)
+│       │                                   Global 레이어에 SWA 윈도우 마스크 강제 주입
+│       │                                   → "NoPE 제거"가 아닌 "SWA처럼 동작"으로 변환
+│       │                                   → 순수한 NoPE 장거리 기여도 측정
+│       └── exp4_long_context.py       ← Exp 4: 4096+ 토큰에서 Global vs SWA attention 분기 측정 [실행 예정]
 │
 ├── outputs/                           ← 모든 실험 결과 (GitHub에 push됨)
 │   ├── run_config.json                ← 1차 분석 실행 파라미터
@@ -303,14 +318,22 @@ sda212331/
   - 다양한 길이(128~512 토큰)와 도메인(한국어/영어/수학) 텍스트 사용
   - 목표: "NoPE 레이어가 SWA 레이어보다 위치 정보를 덜 인코딩하는가"에 대한 신뢰할 수 있는 답
 
-### Exp 3 — SWA Ablation (우선순위 2) → **RQ3**
-- Global 레이어의 attention을 강제로 SWA처럼 마스킹
-- 또는 SWA 레이어를 끄고 Global만 남겼을 때 perplexity 변화 측정
-- 목표: NoPE Global이 장거리 정보 통합에 실제로 기여하는지 인과 검증
+### Exp 3 — Global Zero-Output Ablation → **RQ3** [실행 예정]
+- Global 레이어의 self_attn output을 0으로 교체 → attention 기여 전체 제거
+- **주의**: 방법론이 다소 과격함 (attention을 "제거"하는 것이지 "SWA화"가 아님)
+- **비교 실험**: Exp 3b와 결과를 나란히 놓으면 두 ablation 방법의 차이도 분석 가능
 
-### Exp 4 — Long Context (262K) 분석 (우선순위 3) → **RQ3**
-- 4096 토큰 이상에서 Global Attention이 어디를 보는지 시각화
-- "Lost in the Middle" 현상이 EXAONE 4.5에서 어떻게 나타나는지
+### Exp 3b — SWA Mask Injection Ablation ⭐ (방법론 개선판) → **RQ3** [실행 예정]
+- **Exp 3의 설계 문제를 수정한 개선판**
+- Global 레이어에 SWA 윈도우 마스크를 강제 주입 (register_forward_pre_hook + with_kwargs=True)
+- "Global → SWA처럼 동작"으로 변환 → NoPE의 장거리 attention 효과만 순수 분리
+- WikiText-103 / KLUE-MRC 실제 텍스트 사용 (반복 텍스트 편향 제거)
+- 통계 검정(t-test, Cohen's d) 자동 포함
+
+### Exp 4 — Long Context Hook 분석 → **RQ3** [실행 예정]
+- 2048~8192 토큰 범위에서 hook 기반으로 attention 통계 수집 (OOM 방지)
+- 4096 이상에서 SWA distance가 포화되고 Global만 계속 증가하는지 확인
+- "Lost in the Middle" 현상 EXAONE 4.5 재현 여부
 
 ---
 
@@ -329,6 +352,21 @@ python analyze.py --model-path ./model_cache
 python3 nope_analysis/experiments/exp1_attention_entropy.py
 python3 nope_analysis/experiments/exp1b_long_input.py
 python3 nope_analysis/experiments/exp2_positional_probe.py
+python3 nope_analysis/experiments/exp2b_positional_probe_v2.py
+python3 nope_analysis/experiments/exp3_swa_ablation.py
+python3 nope_analysis/experiments/exp3b_swa_mask_ablation.py   # ⭐ 방법론 개선판 (Exp 3보다 이것 우선)
+python3 nope_analysis/experiments/exp4_long_context.py
+
+# 코퍼스 사전 다운로드 (Exp 3b, 4 실행 전 한 번만)
+python3 -c "from nope_analysis.corpus.downloader import download_all; download_all()"
+
+# 통계 검정 (실험 완료 후 results.jsonl에 적용)
+python3 -c "
+from nope_analysis.analysis.statistical_tests import analyze_jsonl, save_stats_report
+from pathlib import Path
+results = analyze_jsonl(Path('outputs/exp4_long_context/results.jsonl'))
+save_stats_report(results, Path('outputs/exp4_long_context/stats.json'))
+"
 
 # 결과 GitHub push
 git add outputs/ nope_analysis/ HANDOVER.md
