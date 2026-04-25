@@ -98,7 +98,26 @@ pip install transformers safetensors scikit-learn matplotlib -q
 
 ---
 
-### Step 4 — Git 상태 확인
+### Step 4 — Git 인증 설정 (매 세션 필수)
+
+이 환경은 **휘발성**입니다. 매 세션마다 git 인증을 새로 설정해야 합니다.
+사용자에게 PAT(Personal Access Token)를 받아서 아래 명령으로 설정하세요:
+
+```bash
+git remote set-url origin https://xodidfkaus-ctrl:PAT여기에@github.com/xodidfkaus-ctrl/sda212331.git
+```
+
+PAT를 받지 못했다면 사용자에게 요청하세요:
+> "push를 위해 GitHub PAT가 필요합니다. github.com/settings/tokens 에서 repo 권한으로 발급 후 알려주세요."
+
+**PAT는 URL에 박는 방식이 아닌 credentials 방식이 더 안전합니다:**
+```bash
+git config credential.helper store
+echo "https://xodidfkaus-ctrl:PAT여기에@github.com" > ~/.git-credentials
+git remote set-url origin https://github.com/xodidfkaus-ctrl/sda212331.git
+```
+
+### Step 5 — Git 상태 확인
 
 ```bash
 cd /home/elicer/sda212331
@@ -118,6 +137,7 @@ git status              # 미커밋 파일 확인
 | GPU 개수 | `python3 -c "import torch; print(torch.cuda.device_count())"` | `2` |
 | 모델 캐시 | `ls model_cache/models--LGAI-EXAONE--EXAONE-4.5-33B/snapshots/` | 폴더 존재 |
 | 의존성 | `python3 -c "from nope_analysis.loader import load_config; load_config()"` | 오류 없음 |
+| Git 인증 | `git push --dry-run 2>&1` | 오류 없음 |
 | Git 동기화 | `git status` | 미push 결과 없음 |
 
 ---
