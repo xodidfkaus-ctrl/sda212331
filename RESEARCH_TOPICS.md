@@ -114,10 +114,13 @@ it means preceding SWA layers implicitly pass positional information forward.
 | Experiment | Method | Status |
 |-----------|--------|--------|
 | Exp 2 | Layer-wise linear probe → position classification (5 prompts, no train/test split) | ✅ Done |
-| Exp 2b | Train/test split, 30 prompts, 64/128/256 tokens, domain breakdown | 🔄 Running |
+| Exp 2b | Train/test split, 30 prompts, 64/128/256 tokens, domain breakdown | ✅ Done |
 
-**Current result**: Exp 2 shows accuracy=1.0 for both Global and SWA → NoPE layers do encode positional info.
-Reliability uncertain due to no train/test split → Exp 2b addresses this.
+**Current result**:
+- Exp 2: accuracy=1.0 for both → confirmed positional encoding, but unreliable (no train/test split)
+- Exp 2b: test accuracy 0.52–0.55 for both Global and SWA (random baseline=0.10) → **RQ1 confirmed**
+- No meaningful difference between Global (NoPE) and SWA at any length
+- **Conclusion**: NoPE Global layers encode positional information at the same level as SWA layers via propagation from preceding RoPE layers.
 
 ---
 

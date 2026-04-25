@@ -303,14 +303,23 @@ sda212331/
 - **Interpretation**: preceding SWA layers inject positional info via RoPE → Global layers propagate it forward
 - **Limitation**: trained and evaluated on same data (possible overfitting), short sentences only → **Exp 2b needed**
 
+### Exp 2b — Positional Probing v2 (train/test split) → **RQ1** [DONE]
+
+| Length | Global test acc | SWA test acc | Overfit gap |
+|--------|----------------|-------------|-------------|
+| 64  | 0.524 | 0.520 | 0.476 |
+| 128 | 0.554 | 0.552 | 0.446 |
+| 256 | 0.545 | 0.542 | 0.456 |
+
+- **Random baseline**: 0.10 (10-class uniform)
+- **Key finding**: both Global and SWA test accuracy ~0.52–0.55 — well above chance, near-identical
+- **RQ1 conclusion**: NoPE Global layers encode positional information at the same level as SWA layers. Preceding RoPE-based SWA layers inject positional info which Global layers propagate forward.
+- **Note**: high overfit gap (~0.45) due to small prompt count (30). Effect is real but effect size limited by dataset size. PyTorch probe in future experiments will enable larger datasets.
+- **Output**: `outputs/exp2b_positional_probe_v2/`
+
 ---
 
 ## 6. Remaining experiments (priority order)
-
-### Exp 2b — Improved Positional Probe (Priority 1) → **RQ1** [CURRENTLY RUNNING]
-- **Why needed**: Exp 2's accuracy=1.0 is unreliable — no train/test split, same data for train and eval
-- **Improvements**: train/test split (80/20), 30 prompts, lengths 64/128/256, domain breakdown (Korean/English/math/code)
-- **Goal**: reliable answer to "do NoPE layers encode less positional info than SWA layers?"
 
 ### Exp 3b — SWA Mask Injection Ablation ⭐ (Priority 2, methodologically superior) → **RQ3**
 - Injects SWA window mask into Global layers via `register_forward_pre_hook`
