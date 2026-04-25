@@ -1,0 +1,62 @@
+{
+  "128": {
+    "global_nope": {
+      "entropy_mean": 1.7734665349125862,
+      "entropy_std": 0.4987730901081564,
+      "attn_distance_mean": 33.8754768371582
+    },
+    "swa": {
+      "entropy_mean": 1.812122778346141,
+      "entropy_std": 0.5201017246224002,
+      "attn_distance_mean": 31.710511326789856
+    }
+  },
+  "256": {
+    "global_nope": {
+      "entropy_mean": 2.0533791929483414,
+      "entropy_std": 0.5870237491399733,
+      "attn_distance_mean": 70.16550588607788
+    },
+    "swa": {
+      "entropy_mean": 2.163626757760843,
+      "entropy_std": 0.5812419357436462,
+      "attn_distance_mean": 64.6701849301656
+    }
+  },
+  "512": {
+    "global_nope": {
+      "entropy_mean": 2.4911977499723434,
+      "entropy_std": 0.6499450647371634,
+      "attn_distance_mean": 143.89858865737915
+    },
+    "swa": {
+      "entropy_mean": 2.6152197693785033,
+      "entropy_std": 0.5754354906048671,
+      "attn_distance_mean": 127.10545563697815
+    }
+  },
+  "1024": {
+    "global_nope": {
+      "entropy_mean": 2.982298567891121,
+      "entropy_std": 0.7247938287437274,
+      "attn_distance_mean": 305.66317081451416
+    },
+    "swa": {
+      "entropy_mean": 3.044669985771179,
+      "entropy_std": 0.576687593931563,
+      "attn_distance_mean": 255.0891817410787
+    }
+  },
+  "2048": {
+    "global_nope": {
+      "entropy_mean": 3.5418500900268555,
+      "entropy_std": 0.7769842353563533,
+      "attn_distance_mean": 643.7219505310059
+    },
+    "swa": {
+      "entropy_mean": 3.4500620315472283,
+      "entropy_std": 0.5914789615448198,
+      "attn_distance_mean": 489.14546553293866
+    }
+  }
+}
