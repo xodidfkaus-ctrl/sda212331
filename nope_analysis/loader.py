@@ -7,9 +7,10 @@ from transformers.models.exaone4.configuration_exaone4 import Exaone4Config
 CONFIG_MAPPING.register('exaone4_5_text', Exaone4Config)
 
 import torch
-from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoConfig, AutoTokenizer
+from transformers.models.exaone4_5.modeling_exaone4_5 import Exaone4_5_ForConditionalGeneration
 
-MODEL_PATH = '/home/elicer/.cache/huggingface/hub/models--LGAI-EXAONE--EXAONE-4.5-33B/snapshots/58d6616991a60a67f84be82ad241d5bc9668a55c'
+MODEL_PATH = '/home/elicer/sda212331/model_cache/models--LGAI-EXAONE--EXAONE-4.5-33B/snapshots/58d6616991a60a67f84be82ad241d5bc9668a55c'
 
 
 def get_layer_types(cfg) -> list[str]:
@@ -30,11 +31,10 @@ def load_model_and_tokenizer(device_map='auto', dtype=torch.bfloat16):
     tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
 
     print("Loading model (this may take a few minutes)...")
-    model = AutoModelForCausalLM.from_pretrained(
+    model = Exaone4_5_ForConditionalGeneration.from_pretrained(
         MODEL_PATH,
-        torch_dtype=dtype,
+        dtype=dtype,
         device_map=device_map,
-        output_attentions=True,   # attention weights 출력 활성화
         attn_implementation='eager',  # flash_attn은 attention weights 미반환
     )
     model.eval()

@@ -1,0 +1,10 @@
+{
+  "global_nope": {
+    "mean_accuracy": 1.0,
+    "std": 0.0
+  },
+  "swa": {
+    "mean_accuracy": 1.0,
+    "std": 0.0
+  }
+}
