@@ -402,6 +402,33 @@ text = Path('papers/2604.08644/fulltext.txt').read_text(encoding='utf-8')
 
 ---
 
+## 7c. Known design issue — sklearn probe is CPU-only (fix before writing new probe experiments)
+
+**Problem**: Exp 2b uses `sklearn.LogisticRegression` for probe fitting.
+sklearn does not support GPU → 32 vCPUs run at 100% for ~107 minutes while A100 sits idle at 0%.
+
+```
+sklearn LogisticRegression on (3000 × 5120), 192 fits:  ~107 min on CPU
+PyTorch linear layer equivalent on A100:                 ~1 min on GPU  (~100× faster)
+```
+
+**Fix**: replace sklearn probe with PyTorch for any new experiment that uses probing:
+```python
+# ❌ slow — do not use for new probe experiments
+from sklearn.linear_model import LogisticRegression
+clf = LogisticRegression(max_iter=300).fit(X_train, y_train)
+
+# ✅ fast — use this instead
+import torch, torch.nn as nn
+probe = nn.Linear(hidden_size, n_bins).to(model.device)
+optimizer = torch.optim.Adam(probe.parameters(), lr=1e-3)
+# train with cross-entropy loss for ~100 epochs
+```
+
+Exp 2b already ran with sklearn (results valid). Future probe experiments (Topic D, F, I) must use PyTorch.
+
+---
+
 ## 8. Design rules (do not break)
 
 1. Always load model from `model_cache/` (specify HuggingFace cache path directly)
@@ -411,6 +438,7 @@ text = Path('papers/2604.08644/fulltext.txt').read_text(encoding='utf-8')
 5. Every experiment saves: `summary.json` + `results.jsonl` + charts
 6. `stats.jsonl` is append-only — never overwrite (reproducibility)
 7. SVD can be skipped with `--no-spectral` — not required
+8. **Probe fitting must use PyTorch (GPU), not sklearn (CPU)** — see Section 7c above
 
 ---
 
