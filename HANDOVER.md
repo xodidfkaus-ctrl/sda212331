@@ -388,6 +388,38 @@ model, tokenizer = load_model_and_tokenizer()
 
 ---
 
+## 7b. LG EXAONE 공식 논문 자료 (papers/)
+
+`papers/` 디렉토리에 LG AI Research가 발표한 EXAONE 계열 논문 6편이 저장돼 있다.
+각 논문 폴더 구조: `{arxiv_id}/paper.pdf` + `fulltext.txt` + `images/` + `metadata.json`
+
+| arXiv ID | 제목 | 연도 | 우리 연구와의 관련성 |
+|----------|------|------|---------------------|
+| 2604.08644 | **EXAONE 4.5 Technical Report** ⭐ | 2026 | 우리가 분석 중인 모델 — NoPE, SWA, 262K context 상세 설명 |
+| 2507.11407 | EXAONE 4.0 Technical Report | 2025 | EXAONE 4.5 베이스 LM, Reasoning 모드 설계 (주제 C 배경) |
+| 2601.01739 | K-EXAONE Technical Report | 2026 | MoE 구조, 한국어 특화 (주제 D 배경) |
+| 2503.12524 | EXAONE Deep: Reasoning Enhanced | 2025 | 추론 강화 모델, 주제 C/I 직접 배경 |
+| 2412.04862 | EXAONE 3.5 Technical Report | 2024 | long-context 설계 비교 기준 (Exp 3/4 배경) |
+| 2408.03541 | EXAONE 3.0 7.8B | 2024 | 초기 아키텍처 설계 철학 이해 |
+
+**논문 텍스트를 실험 코퍼스로 사용하는 방법:**
+```python
+text = (Path('papers/2604.08644/fulltext.txt').read_text(encoding='utf-8'))
+# 또는 corpus/downloader.py의 get_text_sample()이 WikiText-103 불러옴 (자동)
+```
+
+**논문 이미지 활용:**
+- `papers/2604.08644/images/` — 28장 (아키텍처 다이어그램, attention 패턴 등)
+- `papers/2412.04862/images/` — 8장
+- 주제 E(Vision×NoPE) 연구 시 참고 이미지로 활용 가능
+
+**논문 재다운로드/업데이트:**
+```bash
+python3 papers/download_papers.py
+```
+
+---
+
 ## 8. 설계 원칙 (변경 금지)
 
 1. 모델은 항상 `model_cache/`에서 로드 (HuggingFace 캐시 경로 직접 지정)

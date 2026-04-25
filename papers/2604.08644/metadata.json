@@ -1,0 +1,11 @@
+{
+  "arxiv_id": "2604.08644",
+  "title": "EXAONE 4.5 Technical Report",
+  "year": 2026,
+  "pdf_url": "https://arxiv.org/pdf/2604.08644",
+  "abs_url": "https://arxiv.org/abs/2604.08644",
+  "research_relevance": "우리가 분석 중인 모델. VLM (33B LM + Vision 1.29B), NoPE Global attention, SWA 4096, 262K context",
+  "pdf_size_kb": 2408,
+  "text_chars": 70796,
+  "images_count": 28
+}

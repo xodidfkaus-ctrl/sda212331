@@ -1,0 +1,11 @@
+{
+  "arxiv_id": "2601.01739",
+  "title": "K-EXAONE Technical Report",
+  "year": 2026,
+  "pdf_url": "https://arxiv.org/pdf/2601.01739",
+  "abs_url": "https://arxiv.org/abs/2601.01739",
+  "research_relevance": "MoE 구조 (236B total, 23B active). 한국어 특화 모델 — 주제 D(한국어 vs 영어 레이어 전문화) 참고",
+  "pdf_size_kb": 2773,
+  "text_chars": 92506,
+  "images_count": 2
+}

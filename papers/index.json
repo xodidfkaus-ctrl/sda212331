@@ -1,0 +1,68 @@
+[
+  {
+    "arxiv_id": "2604.08644",
+    "title": "EXAONE 4.5 Technical Report",
+    "year": 2026,
+    "pdf_url": "https://arxiv.org/pdf/2604.08644",
+    "abs_url": "https://arxiv.org/abs/2604.08644",
+    "research_relevance": "우리가 분석 중인 모델. VLM (33B LM + Vision 1.29B), NoPE Global attention, SWA 4096, 262K context",
+    "pdf_size_kb": 2408,
+    "text_chars": 70796,
+    "images_count": 28
+  },
+  {
+    "arxiv_id": "2507.11407",
+    "title": "EXAONE 4.0: Unified LLMs Integrating Non-reasoning and Reasoning Modes",
+    "year": 2025,
+    "pdf_url": "https://arxiv.org/pdf/2507.11407",
+    "abs_url": "https://arxiv.org/abs/2507.11407",
+    "research_relevance": "EXAONE 4.5의 베이스 LM. Reasoning mode가 어떻게 설계됐는지 확인 (주제 C 연구 배경)",
+    "pdf_size_kb": 3446,
+    "text_chars": 93724,
+    "images_count": 0
+  },
+  {
+    "arxiv_id": "2601.01739",
+    "title": "K-EXAONE Technical Report",
+    "year": 2026,
+    "pdf_url": "https://arxiv.org/pdf/2601.01739",
+    "abs_url": "https://arxiv.org/abs/2601.01739",
+    "research_relevance": "MoE 구조 (236B total, 23B active). 한국어 특화 모델 — 주제 D(한국어 vs 영어 레이어 전문화) 참고",
+    "pdf_size_kb": 2773,
+    "text_chars": 92506,
+    "images_count": 2
+  },
+  {
+    "arxiv_id": "2503.12524",
+    "title": "EXAONE Deep: Reasoning Enhanced Language Models",
+    "year": 2025,
+    "pdf_url": "https://arxiv.org/pdf/2503.12524",
+    "abs_url": "https://arxiv.org/abs/2503.12524",
+    "research_relevance": "EXAONE의 추론 강화 버전. 주제 C(Reasoning 모드 attention 변화) 연구의 직접 배경",
+    "pdf_size_kb": 347,
+    "text_chars": 35538,
+    "images_count": 1
+  },
+  {
+    "arxiv_id": "2412.04862",
+    "title": "EXAONE 3.5: Series of Large Language Models for Real-world Use Cases",
+    "year": 2024,
+    "pdf_url": "https://arxiv.org/pdf/2412.04862",
+    "abs_url": "https://arxiv.org/abs/2412.04862",
+    "research_relevance": "32B/7.8B/2.4B. long-context comprehension 강조 — Exp 3/4 장거리 의존성 연구 비교 기준",
+    "pdf_size_kb": 6702,
+    "text_chars": 103377,
+    "images_count": 8
+  },
+  {
+    "arxiv_id": "2408.03541",
+    "title": "EXAONE 3.0 7.8B Instruction Tuned Language Model",
+    "year": 2024,
+    "pdf_url": "https://arxiv.org/pdf/2408.03541",
+    "abs_url": "https://arxiv.org/abs/2408.03541",
+    "research_relevance": "EXAONE 오픈소스 1호 모델. 초기 아키텍처 설계 철학 이해용",
+    "pdf_size_kb": 1872,
+    "text_chars": 80215,
+    "images_count": 0
+  }
+]
