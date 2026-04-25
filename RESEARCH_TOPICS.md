@@ -94,7 +94,7 @@ sda212331/test_images/          ← create this folder, place images here (git-e
 
 EXAONE 4.5 uses a SWA (Sliding Window Attention) + Global (NoPE) hybrid architecture.
 What is novel is the specific design choice of applying NoPE **only to Global Attention layers**
-(not to SWA layers) — no prior mechanistic analysis of this exact configuration exists in the literature.
+(not to SWA layers) — to our knowledge, no prior mechanistic analysis of this exact configuration exists in the literature.
 
 A notable weakness appears in official benchmarks:
 ```
@@ -176,9 +176,10 @@ If "Lost in the Middle" is worse in SWA layers → Global provides compensation.
 
 ### Topic B — MTP layer analysis  ★ highest novelty
 
-**Motivation**: no prior mechanistic analysis of EXAONE 4.5's MTP (Multi-Token Prediction) layer exists.
-(Note: MTP as a concept appears in other models such as DeepSeek and LLaMA 3.1, but EXAONE 4.5's
-specific MTP layer has not been analyzed.)
+**Motivation**: to our knowledge, no prior mechanistic analysis of EXAONE 4.5's MTP (Multi-Token Prediction) layer exists.
+(Note: EXAONE 4.5 adopts MTP from two sources cited in the paper: DeepSeek-V3 [DeepSeek-AI] and
+Gloeckle et al., "Better & Faster LLMs via Multi-token Prediction", ICML 2024 [Meta Research].
+EXAONE 4.5's specific MTP implementation and its interaction with the NoPE architecture has not been analyzed.)
 
 **Research questions**:
 1. How does the MTP layer's attention pattern differ from the 64 main layers?
@@ -271,7 +272,10 @@ Korean is SOV (verb at end) → longer-range dependencies are structurally requi
 
 ### Topic G — Reordered Norm effect quantification
 
-**Motivation**: EXAONE applies norm after Attention/MLP but before residual — non-standard compared to Pre/Post Norm. What effect does this design have on representations?
+**Motivation**: EXAONE 4.0/4.5 uses QK-Reorder-LN (non-standard compared to Pre/Post Norm):
+(1) RMSNorm on Q/K inputs **before** attention, and (2) RMSNorm on attention output **before** the residual add.
+This double-norm design stabilizes deep layers by controlling variance growth (source: EXAONE 4.0 paper, Figure 2).
+What quantitative effect does this have on the residual stream representations?
 
 **Method**:
 - Track L2 norm of residual stream per layer
