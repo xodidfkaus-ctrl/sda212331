@@ -9,8 +9,8 @@ Goals: algorithm understanding, baseline for future EXAONE model comparison, eco
 - Hybrid attention: 16 × (3 SWA + 1 Global/NoPE)
 - Global layers at indices: 3, 7, 11, 15, 19, 23, 27, 31, 35, 39, 43, 47, 51, 55, 59, 63
 - GQA: 40 Q / 8 KV heads | Head dim: 128
-- Reordered Norm: after Attn/MLP, before residual (not standard Pre/Post)
-- Vision encoder: 1.29B, 2D RoPE (separate from LM)
+- Reordered Norm (QK-Reorder-LN): RMSNorm on Q/K inputs before attention + RMSNorm after attention output before residual (not standard Pre/Post)
+- Vision encoder: 1.2B, 2D RoPE (separate from LM)
 - Vocab: 153,600 | Context: 262,144
 
 ## Design Rules (do not break)

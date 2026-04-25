@@ -186,14 +186,14 @@ Run Exp 1
 
 | Item | Value |
 |------|-------|
-| Total parameters | 33B (LM 31.7B + Vision 1.29B) |
+| Total parameters | 33B (LM backbone: 32B from EXAONE 4.0 + Vision encoder: 1.2B) |
 | Layers | 64 main + 1 MTP |
 | Attention pattern | `LLLG` × 16 = 48 SWA + 16 Global |
 | SWA window | 4,096 tokens (RoPE applied, sees only the most recent 4,096) |
 | Global Attention | No window limit, **no RoPE (NoPE)** |
 | Global layer indices | 3, 7, 11, 15, 19, 23, 27, 31, 35, 39, 43, 47, 51, 55, 59, 63 |
 | GQA | 40 Q-heads / 8 KV-heads / head dim 128 |
-| Reordered Norm | applied after Attn/MLP, before residual (non-standard — differs from Pre/Post Norm) |
+| Reordered Norm (QK-Reorder-LN) | RMSNorm on Q/K inputs before attention + RMSNorm after attention output before residual (non-standard — source: EXAONE 4.0 paper) |
 | Vocab | 153,600 | Context | 262,144 tokens |
 
 **What is NoPE?** Not applying RoPE (Rotary Position Embedding). Global layers are designed to capture long-range dependencies without positional encoding because they attend to the full sequence. However, **preceding SWA layers inject positional information into representations via RoPE** — empirically confirmed in Exp 2.

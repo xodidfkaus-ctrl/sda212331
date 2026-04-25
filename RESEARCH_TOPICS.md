@@ -220,7 +220,8 @@ assert hasattr(model, 'language_model'), "unexpected model structure"
 
 ### Topic D — Korean vs English layer specialization
 
-**Motivation**: EXAONE is particularly strong in Korean (KMMMU: EXAONE 42.7 vs Qwen3-VL 32B 37.8).
+**Motivation**: EXAONE shows competitive Korean performance (KMMMU: EXAONE 42.7 vs Qwen3-VL 32B 37.8;
+note Qwen3.5-27B scores 51.7, so EXAONE ranks 2nd among compared VLMs).
 Korean is SOV (verb at end) → longer-range dependencies are structurally required.
 
 **Research question**: are certain Global layers specialized for Korean syntactic processing?
@@ -302,13 +303,21 @@ Korean is SOV (verb at end) → longer-range dependencies are structurally requi
 mechanistically proven. EXAONE 4.5 is a particularly good model for this investigation.
 
 ```
-AIME 2025: 92.9  ← problems potentially in training data (cutoff: Dec 2024)
-AIME 2026: 92.6  ← problems after knowledge cutoff → circumstantial evidence of genuine reasoning
+AIME 2024 (Jan 2024):  pre-cutoff   ← problems in training data (knowledge cutoff: Nov 2024)
+AIME 2025 (Jan 2025):  post-cutoff  ← problems after knowledge cutoff
+AIME 2026 (Jan 2026):  post-cutoff  ← problems well after knowledge cutoff
 ```
 
-The near-identical scores (0.3-point gap) on pre- and post-cutoff problems are suggestive evidence
-of genuine reasoning capability, but they do not constitute proof — problem difficulty distributions
-may differ, and counterfactual verification is required before drawing strong conclusions.
+Note: EXAONE 4.5 knowledge cutoff is Nov 2024 (from EXAONE 4.0 Table 1). AIME 2025 (held Jan–Feb 2025)
+is already after the cutoff, not before. A pre/post comparison therefore uses AIME 2024 as the
+"potentially memorized" baseline and AIME 2025/2026 as the "post-cutoff" group.
+
+If scores are similar across pre- and post-cutoff sets, this is suggestive (not conclusive) evidence
+of genuine reasoning capability — problem difficulty distributions may differ, and counterfactual
+verification is required before drawing strong conclusions.
+
+⚠️ AIME 2025 score of 92.9 is not confirmed in the EXAONE 4.5 technical report (arXiv:2604.08644).
+Use only scores directly cited in the paper; verify before citing in any publication.
 
 **Research question**: is EXAONE 4.5's answer generation memory retrieval or step-by-step reasoning?
 What role do NoPE Global layers play in this process?
@@ -331,7 +340,7 @@ What role do NoPE Global layers play in this process?
    - "Long-range attention activation = mechanistic signal of genuine reasoning"
 
 4. **Pre/post-cutoff accuracy pattern comparison**
-   - Compare AIME 2024 (pre-cutoff) vs AIME 2026 (post-cutoff) by problem type
+   - Compare AIME 2024 (pre-cutoff, Jan 2024) vs AIME 2025/2026 (post-cutoff, after Nov 2024) by problem type
    - If only certain types show a score gap → those types are memory retrieval candidates
 
 **Connection to our research**:
