@@ -144,7 +144,8 @@ If there are unpushed results from the previous session, push them first.
 | Item | Value |
 |------|-------|
 | GitHub | https://github.com/xodidfkaus-ctrl/sda212331 |
-| Environment | Elice Cloud (NVIDIA A100 80GB × 2, RAM 384GB) — **ephemeral, resets on restart** |
+| Environment | Elice Cloud — **ephemeral, resets on restart** |
+| GPU | **A100 80GB × 1 sufficient** (model=65GB < 80GB; `device_map='auto'` adapts automatically). ×2 is overkill for this research — no speed benefit at batch_size=1. |
 | Model path | `/home/elicer/sda212331/model_cache/` (64GB, **deleted on session end**) |
 | Working directory | `/home/elicer/sda212331/` |
 
