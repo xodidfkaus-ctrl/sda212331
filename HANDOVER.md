@@ -1,7 +1,108 @@
 # EXAONE 4.5 NoPE 연구 인수인계 자료
 
 > **이 문서를 읽는 Claude Code에게**: 새 PC, 새 세션에서 이 프로젝트를 시작할 때 가장 먼저 읽어야 할 문서입니다.
-> 반드시 **섹션 9의 이해 확인 질문에 답한 뒤** 작업을 시작하세요. 답하지 않으면 연구자가 당신을 신뢰하지 않습니다.
+> 반드시 **섹션 0의 실행 전 체크리스트를 통과한 뒤** 섹션 9의 이해 확인 질문에 답하고 작업을 시작하세요.
+> 체크리스트를 건너뛰면 실험이 CPU로 돌아 수 시간이 걸리거나 모델이 없어서 실패합니다.
+
+---
+
+## 0. 실행 전 체크리스트 (매 세션 시작 시 반드시 실행)
+
+아래 명령을 **순서대로** 실행하고 모두 통과해야 실험을 시작할 수 있습니다.
+
+### Step 1 — GPU 확인 (가장 중요)
+
+```bash
+python3 -c "import torch; print('CUDA:', torch.cuda.is_available()); print('GPU수:', torch.cuda.device_count()); [print(f'  GPU{i}:', torch.cuda.get_device_name(i)) for i in range(torch.cuda.device_count())]"
+```
+
+**정상 출력:**
+```
+CUDA: True
+GPU수: 2
+  GPU0: NVIDIA A100 80GB PCIe
+  GPU1: NVIDIA A100 80GB PCIe
+```
+
+**❌ `CUDA: False` 로 나오면 즉시 중단 — 실험 절대 실행하지 말 것.**
+
+GPU가 False인 원인과 해결법:
+```bash
+# 원인 확인
+python3 -c "import torch; torch.cuda.is_available()" 2>&1 | grep -i "warn\|error"
+
+# 가장 흔한 원인: PyTorch와 CUDA 드라이버 버전 불일치
+# 드라이버 버전 확인
+nvidia-smi | grep "CUDA Version"
+
+# 해결: CUDA 12.x 드라이버라면 아래 명령으로 PyTorch 재설치
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+# 재설치 후 다시 확인
+python3 -c "import torch; print(torch.cuda.is_available())"
+```
+
+> **왜 중요한가**: GPU 없이 33B 모델 forward pass를 돌리면 실험 1개에 3~4시간 걸립니다.
+> GPU면 5~10분입니다. GPU 없이 실행하면 안 됩니다.
+
+---
+
+### Step 2 — 모델 캐시 확인
+
+```bash
+ls /home/elicer/sda212331/model_cache/models--LGAI-EXAONE--EXAONE-4.5-33B/snapshots/
+```
+
+**정상**: 긴 해시 폴더 이름이 보임 (e.g. `58d6616...`)
+
+**❌ 없으면**: 모델을 재다운로드해야 합니다 (세션 재시작 시 삭제됨).
+```bash
+cd /home/elicer/sda212331
+python3 -c "
+from huggingface_hub import snapshot_download
+snapshot_download('LGAI-EXAONE/EXAONE-4.5-33B', cache_dir='./model_cache', ignore_patterns=['*.bin','*.pt'])
+"
+# 약 20분 소요
+```
+
+---
+
+### Step 3 — 의존성 확인
+
+```bash
+python3 -c "from nope_analysis.loader import load_config; cfg = load_config(); print('OK:', cfg.model_type)"
+```
+
+**정상**: `OK: exaone4_5` 또는 유사한 모델 타입 출력
+
+**❌ ImportError 나오면**: 패키지 재설치
+```bash
+pip install transformers safetensors scikit-learn matplotlib -q
+```
+
+---
+
+### Step 4 — Git 상태 확인
+
+```bash
+cd /home/elicer/sda212331
+git log --oneline -3    # 최근 커밋 확인
+git status              # 미커밋 파일 확인
+```
+
+이전 세션에서 push 안 된 결과가 있으면 먼저 push하고 시작하세요.
+
+---
+
+### 체크리스트 요약표
+
+| 항목 | 확인 명령 | 통과 기준 |
+|------|-----------|-----------|
+| GPU 활성화 | `python3 -c "import torch; print(torch.cuda.is_available())"` | `True` |
+| GPU 개수 | `python3 -c "import torch; print(torch.cuda.device_count())"` | `2` |
+| 모델 캐시 | `ls model_cache/models--LGAI-EXAONE--EXAONE-4.5-33B/snapshots/` | 폴더 존재 |
+| 의존성 | `python3 -c "from nope_analysis.loader import load_config; load_config()"` | 오류 없음 |
+| Git 동기화 | `git status` | 미push 결과 없음 |
 
 ---
 
@@ -13,12 +114,6 @@
 | 환경 | 엘리스 클라우드 (NVIDIA A100 80GB × 2, RAM 384GB) |
 | 모델 경로 | `/home/elicer/sda212331/model_cache/` (64GB, **세션 종료 시 삭제됨**) |
 | 작업 디렉토리 | `/home/elicer/sda212331/` |
-
-**⚠️ 세션 시작 시 반드시 확인:**
-```bash
-ls /home/elicer/sda212331/model_cache/models--LGAI-EXAONE--EXAONE-4.5-33B/
-```
-없으면 → `python analyze.py --model-path ./model_cache` 로 재다운로드 (약 20분)
 
 ---
 
