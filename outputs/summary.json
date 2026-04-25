@@ -1,0 +1,152 @@
+{
+  "embedding": {
+    "count": 1,
+    "total_params": 786432000,
+    "std_mean": 0.007289282977581024,
+    "std_std": 0.0,
+    "abs_mean_mean": 0.005633759777992964,
+    "effective_rank_mean": null,
+    "stable_rank_mean": null,
+    "sparsity_mean": 0.00012311172031331807
+  },
+  "mlp": {
+    "count": 195,
+    "total_params": 27348172800,
+    "std_mean": 0.009462210908532142,
+    "std_std": 0.00030984396100765846,
+    "abs_mean_mean": 0.007520756199478339,
+    "effective_rank_mean": null,
+    "stable_rank_mean": null,
+    "sparsity_mean": 8.511511953726698e-05
+  },
+  "norm": {
+    "count": 260,
+    "total_params": 682240,
+    "std_mean": 0.10408760892460123,
+    "std_std": 0.1038220106683622,
+    "abs_mean_mean": 0.6361999295508632,
+    "effective_rank_mean": null,
+    "stable_rank_mean": null,
+    "sparsity_mean": 0.0
+  },
+  "swa_attn_k_proj": {
+    "count": 49,
+    "total_params": 256901120,
+    "std_mean": 0.008954548352987183,
+    "std_std": 0.0005888839717523948,
+    "abs_mean_mean": 0.006971629193926953,
+    "effective_rank_mean": 172.84367529181094,
+    "stable_rank_mean": 40.178144000384684,
+    "sparsity_mean": 9.83724792010379e-05
+  },
+  "swa_attn_o_proj": {
+    "count": 49,
+    "total_params": 1284505600,
+    "std_mean": 0.00920744420846506,
+    "std_std": 0.0002706018623220954,
+    "abs_mean_mean": 0.00723104419338764,
+    "effective_rank_mean": null,
+    "stable_rank_mean": null,
+    "sparsity_mean": 8.954184485613654e-05
+  },
+  "swa_attn_q_proj": {
+    "count": 49,
+    "total_params": 1284505600,
+    "std_mean": 0.008860722079645006,
+    "std_std": 0.0006434543360128096,
+    "abs_mean_mean": 0.00695630322609629,
+    "effective_rank_mean": null,
+    "stable_rank_mean": null,
+    "sparsity_mean": 9.635380321961581e-05
+  },
+  "swa_attn_v_proj": {
+    "count": 49,
+    "total_params": 256901120,
+    "std_mean": 0.009627097818468298,
+    "std_std": 0.00029256642409115436,
+    "abs_mean_mean": 0.0076454430153327325,
+    "effective_rank_mean": 409.7133470688597,
+    "stable_rank_mean": 196.66365489330724,
+    "sparsity_mean": 8.428145431062891e-05
+  },
+  "global_attn_k_proj": {
+    "count": 16,
+    "total_params": 83886080,
+    "std_mean": 0.008898651838535443,
+    "std_std": 0.0005630397229263247,
+    "abs_mean_mean": 0.006973679177463055,
+    "effective_rank_mean": 179.1370134298698,
+    "stable_rank_mean": 44.43957168668601,
+    "sparsity_mean": 9.597539838068769e-05
+  },
+  "global_attn_o_proj": {
+    "count": 16,
+    "total_params": 419430400,
+    "std_mean": 0.009097261936403811,
+    "std_std": 0.0003981158147471602,
+    "abs_mean_mean": 0.007123834831872955,
+    "effective_rank_mean": null,
+    "stable_rank_mean": null,
+    "sparsity_mean": 9.057998659045552e-05
+  },
+  "global_attn_q_proj": {
+    "count": 16,
+    "total_params": 419430400,
+    "std_mean": 0.008837649860652164,
+    "std_std": 0.0003925975460356407,
+    "abs_mean_mean": 0.006964808679185808,
+    "effective_rank_mean": null,
+    "stable_rank_mean": null,
+    "sparsity_mean": 9.345293119622511e-05
+  },
+  "global_attn_v_proj": {
+    "count": 16,
+    "total_params": 83886080,
+    "std_mean": 0.009526123118121177,
+    "std_std": 0.0003576604163288157,
+    "abs_mean_mean": 0.007564045779872686,
+    "effective_rank_mean": 418.15264425156806,
+    "stable_rank_mean": 205.86669571270366,
+    "sparsity_mean": 8.684396743774414e-05
+  },
+  "vision_encoder": {
+    "count": 342,
+    "total_params": 1286482944,
+    "std_mean": 0.0377708496267183,
+    "std_std": 0.0283695586890092,
+    "abs_mean_mean": 0.17123353349763834,
+    "effective_rank_mean": 320.4738832313611,
+    "stable_rank_mean": 97.98553050464498,
+    "sparsity_mean": 0.00018001804392840488
+  },
+  "output_head": {
+    "count": 1,
+    "total_params": 786432000,
+    "std_mean": 0.013520854525268078,
+    "std_std": 0.0,
+    "abs_mean_mean": 0.010758867487311363,
+    "effective_rank_mean": null,
+    "stable_rank_mean": null,
+    "sparsity_mean": 5.848566797794774e-05
+  },
+  "other": {
+    "count": 1,
+    "total_params": 5120,
+    "std_mean": 0.23358631134033203,
+    "std_std": 0.0,
+    "abs_mean_mean": 1.9558578729629517,
+    "effective_rank_mean": null,
+    "stable_rank_mean": null,
+    "sparsity_mean": 0.0
+  },
+  "mtp_layer": {
+    "count": 4,
+    "total_params": 52444160,
+    "std_mean": 0.17212490737438202,
+    "std_std": 0.09994698686183624,
+    "abs_mean_mean": 1.571890998748131,
+    "effective_rank_mean": null,
+    "stable_rank_mean": null,
+    "sparsity_mean": 3.920078233932145e-05
+  }
+}
