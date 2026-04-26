@@ -13,6 +13,38 @@ Goals: algorithm understanding, baseline for future EXAONE model comparison, eco
 - Vision encoder: 1.2B, 2D RoPE (separate from LM)
 - Vocab: 153,600 | Context: 262,144
 
+## Pre-registration Rules (HARD — do not break under any circumstances)
+
+These rules exist to prevent HARKing (Hypothesizing After Results are Known), which
+is the primary scientific integrity risk in iterative ML research.
+
+**R1. No new experiment without a committed PLAN.md.**
+Before running any experiment script, `experiments/e{NNN}_{slug}/PLAN.md` must exist
+and be committed to git. The git timestamp of PLAN.md must precede the first line
+written to `outputs/*/results.jsonl`. Violation = retroactive retrofitting.
+
+**R2. No experiment marked DONE without committed ANALYSIS.md and stats.json.**
+`auto_validate.py` must be called at the end of every experiment script. It writes
+`outputs/{slug}/stats.json`. This file and the corresponding ANALYSIS.md must both
+be committed before `experiments/e{NNN}_{slug}/STATUS` is updated to `DONE`.
+
+**R3. Findings live in FINDINGS.md, not HANDOVER.md.**
+HANDOVER.md contains experiment metadata, setup instructions, and architecture facts.
+Conclusions and research findings belong in FINDINGS.md, each citing an experiment ID.
+
+**R4. Retrofitted hypotheses must be marked as such.**
+If PLAN.md is written after any results exist, set `retrofitted: true` in the
+`Decision Criteria` block. These results may be used only as exploratory/preliminary
+findings in the paper — never as primary confirmatory evidence.
+
+**R5. Do not re-run experiments to fish for significance.**
+A FAILED or INCONCLUSIVE verdict from auto_validate.py ends the experiment for that
+metric. Changing parameters (n_prompts, threshold, metric definition) after seeing
+a FAILED result to obtain VALIDATED constitutes p-hacking. Document the FAILED
+result in NEGATIVE_RESULTS.md and move on.
+
+---
+
 ## Design Rules (do not break)
 1. **Streaming load**: never load full model into memory. One tensor at a time via safetensors.
 2. **Vision encoder separate**: always report vision stats independently from LM stats.

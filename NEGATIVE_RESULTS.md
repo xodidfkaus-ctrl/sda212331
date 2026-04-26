@@ -1,0 +1,162 @@
+# Negative Results — EXAONE 4.5 NoPE Research
+
+This document records all hypotheses that were rejected, experiments that were aborted,
+and results that were generated but not used in the main paper conclusions.
+
+Negative results are a first-class scientific output. Recording them prevents
+duplication, enables honest meta-analysis, and is required by ACL/EMNLP reproducibility
+checklists.
+
+---
+
+## 1. Rejected Hypotheses
+
+### [e003] Global layers encode position more weakly than SWA layers
+
+**Original prediction**: Probe accuracy(Global) < probe accuracy(SWA)
+
+**Result**: Both groups = 1.000 (train accuracy only; data leakage — e003 was superseded)
+
+**Why rejected**: The working assumption was that NoPE Global layers would encode
+positional information weakly because they lack RoPE. The result was the opposite:
+both achieved perfect accuracy. However, this was train-set accuracy with no
+held-out test, making the result invalid rather than informative.
+
+**Status**: Superseded by e004 (train/test split). The qualitative finding (both
+groups encode position) was replicated in e004 at above-chance test accuracy.
+
+**Implication**: The hypothesis that Global layers *lack* positional information
+(the originally expected finding) was definitively ruled out. This makes the
+mechanistic question (H1 vs H2 in e008) more interesting, not less.
+
+---
+
+### [e004] Train/test split: Global probe accuracy < SWA probe accuracy
+
+**Original prediction**: probe_accuracy(Global) < probe_accuracy(SWA)
+
+**Result**: Global ≈ SWA at all tested lengths (within 0.004):
+
+| Length | Global test | SWA test |
+|--------|-------------|----------|
+| 64 | 0.524 | 0.520 |
+| 128 | 0.554 | 0.552 |
+| 256 | 0.545 | 0.542 |
+
+**Why rejected**: The predicted Global < SWA direction was not observed. Both groups
+encode positional information nearly identically when measured at the residual stream.
+
+**Implication**: The near-identical probe accuracy is consistent with two competing
+mechanistic explanations (H1: Global encodes independently; H2: Global propagates
+SWA's encoding unchanged). This result does not distinguish them — it motivates e008.
+
+**Caution**: n=30 prompts, 80/20 split, sklearn CPU probe, severe overfit (train ≈ 1.0).
+The INCONCLUSIVE verdict reflects underpowering, not a clean null.
+
+---
+
+### [e001] Short inputs: any meaningful entropy/distance difference between Global and SWA
+
+**Original prediction**: Some difference expected (direction unspecified)
+
+**Result**: Entropy 0.9301 vs 0.9422 (d ≈ negligible); distance 7.18 vs 7.10 (d ≈ negligible)
+
+**Why rejected**: At 14–26 tokens, all positions fit within the SWA window (4,096 tokens).
+The architectural distinction between Global (no window) and SWA (window = 4,096) is
+irrelevant when the input is shorter than the window. This null result is mechanistically
+expected, not a failure of the hypothesis.
+
+**Implication**: Motivated e002 (test at longer inputs where window constraint matters).
+
+---
+
+## 2. Aborted Experiments
+
+### [pre-e005] Initial Exp 3b run — OOM at seq_len = 6144 on A100 MIG 3g.40gb (40GB)
+
+**Date**: before 2026-04-26
+
+**Cause**: eager attention on EXAONE-4.5-33B (65GB model) with seq_len = 6,144 exceeded
+available VRAM on the A100 MIG 3g.40gb slice (40GB usable). Forward pass never completed.
+
+**Resolution**: Experiment redesigned (e005) to require full A100 80GB. The MIG 40GB
+slice is documented as insufficient for experiments with seq_len > 2,048.
+
+**VRAM budget note**: Model bfloat16 ≈ 65GB. Eager attention at 6,144 tokens adds
+~3GB activation memory (n_layers × seq² × heads). Full A100 80GB has 12GB headroom;
+MIG 40GB slice does not.
+
+---
+
+### [pre-e004] Exp 2b first run — 107-minute CPU hang
+
+**Date**: before 2026-04-25
+
+**Cause**: sklearn.LogisticRegression does not use GPU. The 30-prompt × 64-layer
+fitting loop ran entirely on CPU (32 vCPUs) for ~107 minutes while the A100 sat idle.
+
+**Resolution**: Documented in HANDOVER.md Section 7c. Future probe experiments (e008)
+must use the PyTorch GPU probe instead of sklearn.
+
+**Design rule added**: CLAUDE.md and CHECKLIST.md updated: "Probe fitting must use
+PyTorch (GPU), not sklearn (CPU)."
+
+---
+
+## 3. Results Not Used in Main Conclusions
+
+### [e003] Perfect probe accuracy (1.000)
+
+Not used because of data leakage (train = test). The number itself is meaningless.
+Retained in outputs/ for audit trail. Superseded by e004.
+
+### [e002] "Reversal at 2,048 tokens" point estimate
+
+The entropy reversal (Global 3.54 > SWA 3.45 at 2,048 tokens) is not used as a
+confirmed finding because:
+- Only one text per length condition (no variance estimate)
+- No statistical test was run at experiment time
+- Effect size d ≈ 0.13 (negligible) from pooled SD estimate
+- Cannot rule out document-specific artifact
+
+This is retained in ANALYSIS.md as a motivating observation for e007, not as evidence.
+
+### [e001] Entropy/distance point estimates at short inputs
+
+The absolute values (entropy ≈ 0.93, distance ≈ 7.1 tokens) describe behavior at
+14–26 tokens. Not used in main conclusions because:
+- Input length is far below the SWA window (not the regime of interest)
+- No statistical test was run
+- 3 prompts is too few for any inference
+
+---
+
+## 4. Template for Future Entries
+
+When a hypothesis is rejected, add a subsection here within one week of the
+experiment completing. Format:
+
+```
+### [e{NNN}] {Hypothesis name}
+
+**Original prediction**: {exact hypothesis from PLAN.md}
+**Result**: {quantitative outcome}
+**Why rejected**: {mechanistic or statistical reason}
+**Implication**: {what this tells us; does it motivate follow-up?}
+**Source**: outputs/{slug}/stats.json — overall_verdict: FAILED
+```
+
+When an experiment is aborted, add:
+
+```
+### [pre-e{NNN}] {Short description}
+
+**Date**: {date}
+**Cause**: {OOM / bug / corpus unavailable / etc.}
+**Resolution**: {redesign / deferred / cancelled}
+**Evidence**: {logs, error messages, VRAM readings}
+```
+
+---
+
+*Last updated: 2026-04-26*
