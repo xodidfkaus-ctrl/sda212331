@@ -1,10 +1,74 @@
 # EXAONE 4.5 NoPE Research — Session Handover
 
 > **To Claude Code reading this**: Read this document first at the start of every new session.
-> Complete the **Section 0 checklist** before doing anything else.
+> Complete the **Section 00 quick setup** before doing anything else.
 > Skipping the checklist causes experiments to run on CPU (hours instead of minutes) or fail due to missing model.
 
 > **Full research topic list** → see `RESEARCH_TOPICS.md`
+
+---
+
+## 00. Ephemeral Session Quick Setup (run this first, every session)
+
+**This is a cloud environment (Elice). All pip packages, git credentials, and model cache are wiped on every session restart.**
+The researcher will give you a GitHub PAT and (if model download is needed) a HuggingFace token at the start of the session.
+
+### What the researcher should say to start a session:
+> "HANDOVER.md 보고 셋업해줘. GitHub PAT는 `ghp_xxx`야. HF 토큰은 `hf_xxx`야."
+
+### Full setup sequence (copy-paste in order)
+
+**Step A — Clone repo (if not already present)**
+```bash
+ls /home/elicer/sda212331/ 2>/dev/null || git clone https://PAT@github.com/xodidfkaus-ctrl/sda212331.git /home/elicer/sda212331
+```
+
+**Step B — Git auth (required every session)**
+```bash
+cd /home/elicer/sda212331
+git remote set-url origin https://PAT@github.com/xodidfkaus-ctrl/sda212331.git
+git config user.email "xodidfkaus@gmail.com"
+git config user.name "elicer"
+```
+
+**Step C — Install dependencies (required every session)**
+```bash
+pip install -r requirements.txt -q
+pip install git+https://github.com/nuxlear/transformers.git@add-exaone4_5 -q
+# torch must be CUDA 12.1 compatible (driver is 12.2)
+pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu121 -q
+```
+
+**Step D — Verify GPU + loader**
+```bash
+python3 -c "import torch; print('CUDA:', torch.cuda.is_available()); p=torch.cuda.get_device_properties(0); print(f'GPU: {p.name}, {p.total_memory/1e9:.1f}GB')"
+python3 -c "import sys; sys.path.insert(0,'.'); from nope_analysis import loader; print('loader: OK')"
+```
+Expected:
+```
+CUDA: True
+GPU: NVIDIA A100 80GB PCIe MIG 3g.40gb, 42.4GB
+loader: OK
+```
+
+**Step E — Model cache (only if running experiments that load the full model)**
+```bash
+ls /home/elicer/sda212331/model_cache/models--LGAI-EXAONE--EXAONE-4.5-33B/snapshots/ 2>/dev/null \
+  || python3 -c "
+from huggingface_hub import snapshot_download
+snapshot_download('LGAI-EXAONE/EXAONE-4.5-33B',
+    cache_dir='/home/elicer/sda212331/model_cache',
+    token='HF_TOKEN_HERE',
+    ignore_patterns=['*.bin','*.pt'])
+"
+# Takes ~20 min, 64GB — only needed for Exp 1–4 (full model forward pass)
+```
+
+**Step F — Git sync check**
+```bash
+git log --oneline -3
+git status
+```
 
 ---
 
@@ -35,9 +99,8 @@ python3 -c "import torch; print('CUDA:', torch.cuda.is_available()); print('GPUs
 **Expected output:**
 ```
 CUDA: True
-GPUs: 2
-  GPU0: NVIDIA A100 80GB PCIe
-  GPU1: NVIDIA A100 80GB PCIe
+GPUs: 1
+  GPU0: NVIDIA A100 80GB PCIe MIG 3g.40gb  (42.4 GB usable)
 ```
 
 **❌ If `CUDA: False` — stop immediately. Do not run any experiment.**
@@ -89,10 +152,14 @@ python3 -c "from nope_analysis.loader import load_config; cfg = load_config(); p
 
 **Expected**: `OK: exaone4_5` or similar
 
-**❌ ImportError**: reinstall packages
+**❌ ImportError**: reinstall packages (order matters)
 ```bash
-pip install transformers safetensors scikit-learn matplotlib -q
+pip install -r requirements.txt -q
+pip install git+https://github.com/nuxlear/transformers.git@add-exaone4_5 -q
+pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu121 -q
 ```
+> **Why the nuxlear fork?** PyPI transformers does not include `exaone4_5` yet. The nuxlear fork adds `Exaone4_5_ForConditionalGeneration`.
+> **Why torch cu121?** The environment has CUDA driver 12.2 (535.x). torch>=2.6 ships cu124/cu126 which requires driver 12.4+. torch 2.5.1+cu121 is the highest version compatible with this driver.
 
 ---
 
@@ -131,7 +198,7 @@ If there are unpushed results from the previous session, push them first.
 | Item | Command | Pass condition |
 |------|---------|---------------|
 | GPU active | `python3 -c "import torch; print(torch.cuda.is_available())"` | `True` |
-| GPU count | `python3 -c "import torch; print(torch.cuda.device_count())"` | `2` |
+| GPU count | `python3 -c "import torch; print(torch.cuda.device_count())"` | `1` |
 | Model cache | `ls model_cache/models--LGAI-EXAONE--EXAONE-4.5-33B/snapshots/` | folder exists |
 | Dependencies | `python3 -c "from nope_analysis.loader import load_config; load_config()"` | no error |
 | Git auth | `git push --dry-run 2>&1` | no error |
@@ -145,7 +212,7 @@ If there are unpushed results from the previous session, push them first.
 |------|-------|
 | GitHub | https://github.com/xodidfkaus-ctrl/sda212331 |
 | Environment | Elice Cloud — **ephemeral, resets on restart** |
-| GPU | **A100 80GB × 1 sufficient** (model=65GB < 80GB; `device_map='auto'` adapts automatically). ×2 is overkill for this research — no speed benefit at batch_size=1. |
+| GPU | **A100 80GB × 1, MIG mode (42.4GB slice)** — sufficient for this research. `device_map='auto'` handles allocation. |
 | Model path | `/home/elicer/sda212331/model_cache/` (64GB, **deleted on session end**) |
 | Working directory | `/home/elicer/sda212331/` |
 
@@ -473,4 +540,4 @@ Exp 2b already ran with sklearn (results valid). Future probe experiments (Topic
 
 ---
 
-*Last updated: 2026-04-25*
+*Last updated: 2026-04-26*
