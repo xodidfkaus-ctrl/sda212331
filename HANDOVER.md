@@ -5,88 +5,88 @@
 > Skipping the checklist causes experiments to run on CPU (hours instead of minutes) or fail due to missing model.
 
 > **Full research topic list** → see `RESEARCH_TOPICS.md`
+> **Standing experiment rules** → see `CHECKLIST.md` (re-read items 1–6 before every run; items 7–9 every session; items 13–14 always)
 
 ---
 
 ## 00. Ephemeral Session Quick Setup (run this first, every session)
 
-**모든 클라우드 환경은 세션 재시작 시 pip 패키지, git credentials, 모델 캐시가 초기화된다.**
-클라우드가 바뀌어도 동일하다. 매 세션 시작 시 아래 순서를 전부 실행할 것.
+All cloud environments reset pip packages, git credentials, and model cache on session restart — regardless of which cloud. Run the full sequence below at the start of every session.
 
-### 연구자가 세션 시작 시 Claude에게 할 말
-> "HANDOVER.md 보고 셋업해줘. GitHub PAT는 `ghp_xxx`야."
+### What the researcher says to Claude at session start
+> "Read HANDOVER.md and set up. GitHub PAT is `ghp_xxx`."
 
-- GitHub PAT: git push/pull 인증용. 반드시 제공해야 함.
-- HuggingFace 토큰: **불필요** (EXAONE-4.5-33B는 public 모델, gated=False 확인됨)
+- GitHub PAT: required for git push/pull authentication.
+- HuggingFace token: **not required** (EXAONE-4.5-33B is a public model, gated=False confirmed)
 
 ---
 
-### Step A — 작업 디렉토리 확인 및 repo 클론
+### Step A — Working directory check and repo clone
 
 ```bash
-# 현재 홈 디렉토리 확인 (클라우드마다 다를 수 있음)
-echo "홈: $HOME"
+# Confirm home directory (may differ across cloud environments)
+echo "HOME: $HOME"
 
-# repo가 없으면 클론 (PAT를 실제 값으로 교체)
+# Clone repo if not present (replace PAT with actual value)
 REPO_DIR="$HOME/sda212331"
 ls "$REPO_DIR" 2>/dev/null || git clone https://PAT@github.com/xodidfkaus-ctrl/sda212331.git "$REPO_DIR"
 cd "$REPO_DIR"
 ```
 
-> **주의**: 클라우드가 바뀌면 홈 경로가 `/home/elicer/` 가 아닐 수 있다.
-> `loader.py`의 `MODEL_PATH`가 `/home/elicer/sda212331/model_cache/...` 로 하드코딩되어 있으므로,
-> 홈이 다를 경우 `nope_analysis/loader.py` 13번째 줄의 `MODEL_PATH`를 수정해야 한다.
+> **Note**: If the cloud environment changes, the home path may differ from `/home/elicer/`.
+> `nope_analysis/loader.py` line 13 has `MODEL_PATH` hardcoded to `/home/elicer/sda212331/model_cache/...`.
+> If the home path differs, update `MODEL_PATH` in `nope_analysis/loader.py` line 13.
 
 ---
 
-### Step B — Git auth 설정 (매 세션 필수)
+### Step B — Git auth setup (required every session)
 
 ```bash
 cd "$HOME/sda212331"
 git remote set-url origin https://PAT@github.com/xodidfkaus-ctrl/sda212331.git
 git config user.email "xodidfkaus@gmail.com"
 git config user.name "elicer"
-# 확인
+# Verify
 git push --dry-run 2>&1 | head -3
 ```
 
 ---
 
-### Step C — GPU / CUDA 버전 확인 (의존성 설치 전 반드시 먼저)
+### Step C — GPU / CUDA version check (must run before installing dependencies)
 
 ```bash
 nvidia-smi | grep "CUDA Version"
 python3 -c "import subprocess; r=subprocess.run(['nvidia-smi','--query-gpu=name,memory.total','--format=csv,noheader'],capture_output=True,text=True); print(r.stdout)"
 ```
 
-결과에 따라 torch 설치 버전이 달라진다:
+Install torch based on detected CUDA driver version:
 
-| CUDA Driver 버전 | torch 설치 명령 |
-|-----------------|----------------|
+| CUDA Driver Version | torch install command |
+|--------------------|-----------------------|
 | 12.1 ~ 12.2 | `pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu121` |
 | 12.4 ~ 12.5 | `pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu124` |
 | 12.6+ | `pip install torch --index-url https://download.pytorch.org/whl/cu126` |
 
-> **Elice A100 환경 기준**: CUDA driver 12.2 → `cu121` 사용 (2026-04-26 확인)
+> **Elice A100 baseline**: CUDA driver 12.2 → use `cu121` (confirmed 2026-04-26)
 
 ---
 
-### Step D — 의존성 설치 (매 세션 필수)
+### Step D — Install dependencies (required every session)
 
 ```bash
 cd "$HOME/sda212331"
 pip install -r requirements.txt -q
 pip install git+https://github.com/nuxlear/transformers.git@add-exaone4_5 -q
-# torch는 Step C에서 확인한 버전으로 설치 (Elice 기준: cu121)
+# Install torch per Step C result (Elice baseline: cu121)
 pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu121 -q
 ```
 
-> **왜 nuxlear fork?** PyPI transformers에는 `exaone4_5` 모듈이 없음. nuxlear fork의 `add-exaone4_5` 브랜치에만 있음.
-> `requirements.txt`의 `transformers>=4.40.0` 로는 설치되지 않으므로 반드시 별도로 설치해야 함.
+> **Why the nuxlear fork?** The `exaone4_5` module is not in PyPI transformers. Only the `add-exaone4_5` branch of the nuxlear fork includes it.
+> `requirements.txt` lists `transformers>=4.40.0` which does not satisfy this — always install the fork separately.
 
 ---
 
-### Step E — GPU + loader 검증
+### Step E — GPU + loader verification
 
 ```bash
 python3 -c "
@@ -96,36 +96,36 @@ if torch.cuda.is_available():
     p = torch.cuda.get_device_properties(0)
     print(f'GPU: {p.name}, {p.total_memory/1e9:.1f}GB')
 else:
-    print('❌ CUDA 없음 — Step C/D 재확인')
+    print('No CUDA — recheck Steps C/D')
 "
 python3 -c "import sys; sys.path.insert(0,'$HOME/sda212331'); from nope_analysis import loader; print('loader: OK')"
 ```
 
-정상 출력 예시 (Elice A100):
+Expected output (Elice A100):
 ```
 CUDA: True
 GPU: NVIDIA A100 80GB PCIe MIG 3g.40gb, 42.4GB
 loader: OK
 ```
 
-다른 클라우드면 GPU 이름이 다를 수 있음. **중요한 것은 `CUDA: True`와 `loader: OK`**.
+GPU name will differ on other clouds. **What matters: `CUDA: True` and `loader: OK`**.
 
-**최소 요구 VRAM: 80GB** (모델 bfloat16 = 65GB + 활성화 메모리)
+**Minimum VRAM: 80GB** (model bfloat16 = 65GB + activation memory)
 
-| GPU | VRAM | 실험 가능 여부 |
-|-----|------|--------------|
-| A100 80GB (full) | 80GB | ✅ 모든 실험 가능 |
-| H100 80GB | 80GB | ✅ 모든 실험 가능 |
-| A100 MIG 3g.40gb | 40GB | ❌ seq>2048에서 OOM |
-| A6000 48GB | 48GB | ❌ 부족 |
+| GPU | VRAM | Experiment feasibility |
+|-----|------|----------------------|
+| A100 80GB (full) | 80GB | ✅ All experiments |
+| H100 80GB | 80GB | ✅ All experiments |
+| A100 MIG 3g.40gb | 40GB | ❌ OOM for seq > 2048 |
+| A6000 48GB | 48GB | ❌ Insufficient |
 
 ---
 
-### Step F — 모델 캐시 확인 및 다운로드
+### Step F — Model cache check and download
 
 ```bash
 ls "$HOME/sda212331/model_cache/models--LGAI-EXAONE--EXAONE-4.5-33B/snapshots/" 2>/dev/null \
-  && echo "모델 캐시 존재" \
+  && echo "Model cache exists" \
   || python3 -c "
 from huggingface_hub import snapshot_download
 snapshot_download(
@@ -133,17 +133,17 @@ snapshot_download(
     cache_dir='$HOME/sda212331/model_cache',
     ignore_patterns=['*.bin','*.pt'],
 )
-print('다운로드 완료')
+print('Download complete')
 "
-# 약 20~40분, 64GB. 토큰 불필요(public 모델).
+# ~20-40 minutes, 64GB. No token required (public model).
 ```
 
-> **모델 캐시는 매 세션 삭제된다.** 실험 실행 전 반드시 재다운로드 필요.
-> 다운로드 중에도 다른 셋업 작업은 진행 가능.
+> **Model cache is deleted every session.** Must re-download before running experiments.
+> Other setup steps can proceed in parallel during download.
 
 ---
 
-### Step G — Git 동기화 확인
+### Step G — Git sync check
 
 ```bash
 cd "$HOME/sda212331"
@@ -151,20 +151,20 @@ git log --oneline -3
 git status
 ```
 
-이전 세션의 results가 push되지 않았다면 지금 push.
+Push any results from the previous session that were not pushed.
 
 ---
 
-### 체크리스트 요약
+### Checklist summary
 
-| 항목 | 확인 방법 | 통과 조건 |
-|------|----------|----------|
-| repo 존재 | `ls $HOME/sda212331` | 파일 목록 출력 |
-| Git auth | `git push --dry-run` | 오류 없음 |
+| Item | Command | Pass condition |
+|------|---------|---------------|
+| Repo exists | `ls $HOME/sda212331` | File list shown |
+| Git auth | `git push --dry-run` | No error |
 | CUDA | `python3 -c "import torch; print(torch.cuda.is_available())"` | `True` |
-| VRAM ≥ 40GB | GPU 확인 출력 | memory ≥ 40GB |
-| loader import | `from nope_analysis import loader` | 오류 없음 |
-| 모델 캐시 | `ls model_cache/.../snapshots/` | 폴더 존재 |
+| VRAM >= 40GB | GPU output | memory >= 40GB |
+| Loader import | `from nope_analysis import loader` | No error |
+| Model cache | `ls model_cache/.../snapshots/` | Folder exists |
 
 ---
 
@@ -199,7 +199,7 @@ GPUs: 1
   GPU0: NVIDIA A100 80GB PCIe MIG 3g.40gb  (42.4 GB usable)
 ```
 
-**❌ If `CUDA: False` — stop immediately. Do not run any experiment.**
+**If `CUDA: False` — stop immediately. Do not run any experiment.**
 
 Diagnosis and fix:
 ```bash
@@ -228,7 +228,7 @@ ls /home/elicer/sda212331/model_cache/models--LGAI-EXAONE--EXAONE-4.5-33B/snapsh
 
 **Expected**: a long hash folder name (e.g. `58d6616...`)
 
-**❌ Missing**: re-download the model (deleted on session restart).
+**Missing**: re-download the model (deleted on session restart).
 ```bash
 cd /home/elicer/sda212331
 python3 -c "
@@ -248,7 +248,7 @@ python3 -c "from nope_analysis.loader import load_config; cfg = load_config(); p
 
 **Expected**: `OK: exaone4_5` or similar
 
-**❌ ImportError**: reinstall packages (order matters)
+**ImportError**: reinstall packages (order matters)
 ```bash
 pip install -r requirements.txt -q
 pip install git+https://github.com/nuxlear/transformers.git@add-exaone4_5 -q
@@ -308,7 +308,7 @@ If there are unpushed results from the previous session, push them first.
 |------|-------|
 | GitHub | https://github.com/xodidfkaus-ctrl/sda212331 |
 | Environment | Elice Cloud — **ephemeral, resets on restart** |
-| GPU | **A100 80GB × 1 (전체, MIG 아님)** 이상 필수. 모델 65GB + 활성화 메모리 때문에 최소 80GB VRAM 필요. MIG 40GB 슬라이스는 Exp 3b 이후 실험 불가. |
+| GPU | **A100 80GB × 1 (full, not MIG)** or equivalent required. Model bfloat16 = 65GB + activation memory → minimum 80GB VRAM. MIG 40GB slices cannot run Exp 3b and beyond. |
 | Model path | `/home/elicer/sda212331/model_cache/` (64GB, **deleted on session end**) |
 | Working directory | `/home/elicer/sda212331/` |
 
@@ -321,28 +321,49 @@ If there are unpushed results from the previous session, push them first.
 
 ### Background
 - EXAONE 4.5 uses a SWA (Sliding Window Attention) + Global (NoPE) hybrid architecture
-- The specific design of applying NoPE **only to Global Attention** (not SWA) has no prior mechanistic analysis in the literature
+- Similar hybrid patterns appear in Mistral-family models (SWA + full attention, but RoPE applied to both) and Cohere Command-A; however, the specific design of applying NoPE *only* to Global layers — so local context uses RoPE and global context uses no positional encoding — has not been analyzed mechanistically in published work as of April 2026
+- **Paper positioning**: This study provides the first mechanistic analysis of the SWA-RoPE + Global-NoPE hybrid behavior. It does **not** claim priority for the architecture design itself. The related architecture note must be included in the paper's related work section.
 - **Final goal**: arXiv paper → ACL/EMNLP workshop submission
 
 ### Three core research questions
 
 | RQ | Question | Experiments |
 |----|----------|-------------|
-| **RQ1** | Do NoPE Global layers encode positional information? | Exp 2, Exp 2b |
-| **RQ2** | Do SWA (RoPE) and Global (NoPE) have functionally different attention patterns? | Exp 1, Exp 1b |
-| **RQ3** | Does NoPE Global actually contribute to long-range dependency (262K context)? | Exp 3b, Exp 3, Exp 4 |
+| **RQ1** | Do NoPE Global hidden states contain positional information, and is this signal *generated by Global layers* or *propagated unchanged from preceding SWA layers*? | Exp 2, Exp 2b, **Exp 2c** |
+| **RQ2** | Do SWA (RoPE) and Global (NoPE) exhibit functionally different attention patterns, and at what sequence length does the difference emerge? | Exp 1, Exp 1b |
+| **RQ3** | Does NoPE Global Attention make a causal contribution to long-range dependency beyond what SWA alone provides? See Section 2b for operational definition. | Exp 3b, Exp 3, Exp 4 |
 
 ### Methodology note — this is exploratory research
 Each experiment's result informs the design of the next one. **The experiment plan is not fixed.**
 
 ```
 Run Exp 1
-  → find pattern in results (e.g. layers 32–48 differ)
+  → find pattern in results (e.g. layers 32-48 differ)
   → generate hypothesis
   → design Exp 2 (re-measure that range by input length)
   → find Korean/English difference
   → design Exp 3 ...
 ```
+
+---
+
+## 2b. RQ3 Operational Definition (pre-register before running Exp 3/3b/4)
+
+**Why this section exists**: Exp 3 (zero-output ablation), Exp 3b (SWA mask injection), and Exp 4 (long-context hook) each measure "contribution" via a different proxy. Without a pre-registered definition, conflicting results between experiments cannot be principled interpreted, and a reviewer can reject the RQ3 conclusion by pointing to whichever experiment does not support it.
+
+### Operational definition
+> **NoPE Global Attention contributes to long-range dependency** if and only if **at least two** of the following three conditions hold:
+>
+> 1. **(Exp 3b)** Forcing Global layers to attend like SWA (same window mask) causes a statistically significant increase in perplexity at token positions > 4,096, with Cohen's d > 0.5.
+> 2. **(Exp 3)** Zeroing Global layer attention output causes a statistically significant degradation in perplexity or long-range recall accuracy, with Cohen's d > 0.5.
+> 3. **(Exp 4)** Global attention distance continues to grow with sequence length beyond the SWA saturation point (>= 4,096 tokens) while SWA distance plateaus, with the divergence statistically significant at >= 2 length conditions.
+
+### Triangulation protocol
+- Report each experiment independently with its own statistical tests (Welch t, Cohen's d, bootstrap CI).
+- If all three conditions hold → strong causal evidence.
+- If exactly two hold → moderate evidence; discuss which proxy is most ecologically valid.
+- If fewer than two hold → conclusion is "no evidence of Global causal contribution at tested lengths." Do not overstate.
+- **Conflicts between experiments must be explicitly analyzed** (e.g., Exp 4 shows distance divergence but Exp 3b shows no perplexity change → discuss the methodological difference between attention pattern vs. functional output).
 
 ---
 
@@ -360,7 +381,7 @@ Run Exp 1
 | Reordered Norm (QK-Reorder-LN) | RMSNorm on Q/K inputs before attention + RMSNorm after attention output before residual (non-standard — source: EXAONE 4.0 paper) |
 | Vocab | 153,600 | Context | 262,144 tokens |
 
-**What is NoPE?** Not applying RoPE (Rotary Position Embedding). Global layers are designed to capture long-range dependencies without positional encoding because they attend to the full sequence. However, **preceding SWA layers inject positional information into representations via RoPE** — empirically confirmed in Exp 2.
+**What is NoPE?** Not applying RoPE (Rotary Position Embedding). Global layers attend to the full sequence without positional encoding. Preceding SWA layers apply RoPE and inject positional information into the shared residual stream — this is the likely reason why hidden states at Global layers still contain positional information despite NoPE (Exp 2/2b). Whether Global layers *add to* or merely *pass through* this signal is the open question addressed by Exp 2c (H1 vs. H2 — see Section 6).
 
 ---
 
@@ -368,61 +389,65 @@ Run Exp 1
 
 ```
 sda212331/
-│
-├── CLAUDE.md                          ← Claude Code design rules (do not break)
-├── HANDOVER.md                        ← this file
-├── README.md                          ← minimal project description
-├── requirements.txt                   ← Python dependencies
-├── .gitignore                         ← excludes model_cache/, __pycache__/
-│
-├── analyze.py                         ← [Phase 1] weight statistics analysis entry point
-│                                         streams model tensors, computes per-tensor stats
-│                                         python analyze.py --model-path ./model_cache
-│
-├── run.sh                             ← shell script to run analyze.py
-├── run_nope.sh                        ← runs Exp 1 + Exp 2 sequentially + auto git push
-│
-├── src/                               ← [Phase 1] weight stats modules (used by analyze.py)
-│   ├── loader.py                      ← safetensors streaming loader, tensor classifier
-│   │                                     classify_tensor(): categorizes tensors
-│   │                                     iter_tensors(): streaming yield to prevent OOM
-│   ├── stats.py                       ← tensor statistics (std, abs_mean, sparsity, effective_rank, stable_rank)
-│   │                                     StatsAggregator: append-only write to stats.jsonl
-│   ├── viz.py                         ← visualization (4 chart types)
-│   └── report.py                      ← generates markdown analysis report
-│
-├── nope_analysis/                     ← [Phase 2] NoPE behavior analysis experiments
-│   ├── loader.py                      ← full model load (for attention extraction)
-│   │                                     ⚠️ includes CONFIG_MAPPING patch — always use this loader
-│   │                                     load_model_and_tokenizer(): forces attn_implementation='eager'
-│   │                                     get_global_layer_indices(), get_swa_layer_indices()
-│   ├── analysis/
-│   │   └── statistical_tests.py      ← statistical testing utilities
-│   │                                    compare_groups(): Welch t-test + Cohen's d + bootstrap CI
-│   │                                    analyze_jsonl(): analyze experiment results.jsonl directly
-│   ├── corpus/
-│   │   └── downloader.py             ← real text corpus downloader
-│   │                                    WikiText-103 (English) / KLUE-MRC (Korean) auto-download+cache
-│   │                                    build_input_from_corpus(): creates token tensors for experiments
-│   └── experiments/
-│       ├── exp1_attention_entropy.py  ← Exp 1: short input (14–26 tokens) entropy [DONE]
-│       ├── exp1b_long_input.py        ← Exp 1b: long input (128–2048 tokens) entropy + distance [DONE]
-│       ├── exp2_positional_probe.py   ← Exp 2: layer-wise positional linear probe [DONE]
-│       ├── exp2b_positional_probe_v2.py ← Exp 2b: improved probe (train/test split, 30 prompts) [RUNNING]
-│       ├── exp3_swa_ablation.py       ← Exp 3: zero-out Global attn output ablation [PENDING]
-│       ├── exp3b_swa_mask_ablation.py ← Exp 3b: ⭐ SWA mask injection ablation (methodologically superior)
-│       │                                   injects SWA window mask into Global layers via forward hook
-│       │                                   → converts Global to "behave like SWA"
-│       │                                   → isolates pure NoPE long-range contribution
-│       └── exp4_long_context.py       ← Exp 4: Global vs SWA attention divergence at 4096+ tokens [PENDING]
-│
-├── outputs/                           ← all experiment results (pushed to GitHub)
-│   ├── exp1_attention_entropy/        ← Exp 1 results [DONE]
-│   ├── exp1b_long_input/              ← Exp 1b results [DONE]
-│   ├── exp2_positional_probe/         ← Exp 2 results [DONE]
-│   └── exp2b_positional_probe_v2/     ← Exp 2b results [RUNNING / pending]
-│
-└── model_cache/                       ← 64GB model files (git-excluded, deleted on session end)
+|
++-- CLAUDE.md                          <- Claude Code design rules (do not break)
++-- HANDOVER.md                        <- this file
++-- README.md                          <- minimal project description
++-- requirements.txt                   <- Python dependencies
++-- .gitignore                         <- excludes model_cache/, __pycache__/
+|
++-- analyze.py                         <- [Phase 1] weight statistics analysis entry point
+|                                         streams model tensors, computes per-tensor stats
+|                                         python analyze.py --model-path ./model_cache
+|
++-- run.sh                             <- shell script to run analyze.py
++-- run_nope.sh                        <- runs Exp 1 + Exp 2 sequentially + auto git push
+|
++-- src/                               <- [Phase 1] weight stats modules (used by analyze.py)
+|   +-- loader.py                      <- safetensors streaming loader, tensor classifier
+|   |                                     classify_tensor(): categorizes tensors
+|   |                                     iter_tensors(): streaming yield to prevent OOM
+|   +-- stats.py                       <- tensor statistics (std, abs_mean, sparsity, effective_rank, stable_rank)
+|   |                                     StatsAggregator: append-only write to stats.jsonl
+|   +-- viz.py                         <- visualization (4 chart types)
+|   +-- report.py                      <- generates markdown analysis report
+|
++-- nope_analysis/                     <- [Phase 2] NoPE behavior analysis experiments
+|   +-- loader.py                      <- full model load (for attention extraction)
+|   |                                     includes CONFIG_MAPPING patch — always use this loader
+|   |                                     load_model_and_tokenizer(): forces attn_implementation='eager'
+|   |                                     get_global_layer_indices(), get_swa_layer_indices()
+|   +-- analysis/
+|   |   +-- statistical_tests.py      <- statistical testing utilities
+|   |                                    compare_groups(): Welch t-test + Cohen's d + bootstrap CI
+|   |                                    analyze_jsonl(): analyze experiment results.jsonl directly
+|   +-- corpus/
+|   |   +-- downloader.py             <- real text corpus downloader
+|   |                                    WikiText-103 (English) / KLUE-MRC (Korean) auto-download+cache
+|   |                                    build_input_from_corpus(): creates token tensors for experiments
+|   +-- experiments/
+|       +-- exp1_attention_entropy.py  <- Exp 1: short input (14-26 tokens) entropy [DONE]
+|       +-- exp1b_long_input.py        <- Exp 1b: long input (128-2048 tokens) entropy + distance [DONE]
+|       +-- exp2_positional_probe.py   <- Exp 2: layer-wise positional linear probe [DONE]
+|       +-- exp2b_positional_probe_v2.py <- Exp 2b: probe with train/test split, 30 prompts [DONE]
+|       +-- exp2c_delta_probe.py       <- Exp 2c: delta-attribution probe [PENDING]
+|       |                                   Compare probe acc at Global layer INPUT vs OUTPUT
+|       |                                   Distinguishes H1 (Global generates position) from
+|       |                                   H2 (Global propagates SWA's signal unchanged)
+|       +-- exp3_swa_ablation.py       <- Exp 3: zero-out Global attn output ablation [PENDING]
+|       +-- exp3b_swa_mask_ablation.py <- Exp 3b: SWA mask injection ablation [PENDING]
+|       |                                   injects SWA window mask into Global layers via forward hook
+|       |                                   converts Global to "behave like SWA"
+|       |                                   isolates pure NoPE long-range contribution
+|       +-- exp4_long_context.py       <- Exp 4: Global vs SWA attention divergence at 4096+ tokens [PENDING]
+|
++-- outputs/                           <- all experiment results (pushed to GitHub)
+|   +-- exp1_attention_entropy/        <- Exp 1 results [DONE]
+|   +-- exp1b_long_input/              <- Exp 1b results [DONE]
+|   +-- exp2_positional_probe/         <- Exp 2 results [DONE]
+|   +-- exp2b_positional_probe_v2/     <- Exp 2b results [DONE]
+|
++-- model_cache/                       <- 64GB model files (git-excluded, deleted on session end)
 ```
 
 ---
@@ -439,8 +464,7 @@ sda212331/
 |--------|--------------|-----|
 | Entropy | 0.9301 | 0.9422 |
 | Attn Distance | 7.18 tokens | 7.10 tokens |
-- **Conclusion**: no difference — short inputs fit entirely within the SWA window (4,096), so structural differences don't emerge
-- **Next**: Exp 1b (long input)
+- **Conclusion**: No difference — short inputs fit entirely within the SWA window (4,096 tokens), so the structural distinction between Global and SWA does not emerge. Motivates Exp 1b.
 
 ### Exp 1b — Attention Entropy (long input, 128–2048 tokens) → **RQ2** [DONE]
 
@@ -452,19 +476,21 @@ sda212331/
 | 1024 | 2.9823 | 3.0447 | 305.7 | 255.1 |
 | 2048 | **3.5419** | **3.4501** | **643.7** | **489.1** |
 
-- **Key finding 1**: at 2,048 tokens, Global entropy (3.54) > SWA entropy (3.45) — first meaningful reversal
-- **Key finding 2**: attention distance gap grows sharply with length (2.2 at 128 tokens → **154.6** at 2,048)
-  - Global: attends uniformly across full sequence (distance approaches seq_len/2)
-  - SWA: distance growth slows as length increases (window constraint)
-- **New hypothesis**: beyond 4,096 tokens, SWA distance saturates while Global continues to grow → motivates Exp 4
+- **Observed finding 1**: At 2,048 tokens, Global entropy (3.54) > SWA entropy (3.45) — direction reversal observed (Delta = 0.09 nats). **Statistical significance not yet verified.** Must apply `compare_groups()` from `statistical_tests.py` (Welch t-test + Cohen's d + bootstrap CI) before calling this "meaningful." If the experiment ran on a single input per length condition, rerun with >= 10 distinct inputs per condition to obtain variance estimates.
+- **Observed finding 2**: Attention distance gap grows with length (2.2 tokens at 128 → 154.6 tokens at 2,048). Global attends more uniformly across the full sequence; SWA distance growth slows under window constraint. **Apply statistical tests to confirm this trend before citing it.**
+- **Hypothesis** (pending statistical validation): Beyond 4,096 tokens, SWA distance will saturate while Global continues growing. → Motivates Exp 4.
 
 ### Exp 2 — Positional Probing (short input) → **RQ1**
 | Metric | Global (NoPE) | SWA |
 |--------|--------------|-----|
 | Probe Accuracy | **1.000** | **1.000** |
-- **Key finding**: even NoPE layers perfectly encode positional information in hidden states
-- **Interpretation**: preceding SWA layers inject positional info via RoPE → Global layers propagate it forward
-- **Limitation**: trained and evaluated on same data (possible overfitting), short sentences only → **Exp 2b needed**
+- **Finding**: Both Global and SWA hidden states are perfectly linearly separable for position class.
+- **Limitation**: Trained and tested on the same data (severe overfit). Short sentences only.
+- **Caution — do not overinterpret**: Identical probe accuracy is consistent with two competing hypotheses:
+  - **(H1)** Global layers independently generate positional signals ("encode")
+  - **(H2)** Global layers propagate SWA's positional representation unchanged ("propagate")
+  - A linear probe on the residual stream cannot distinguish H1 from H2. The residual stream at a Global layer is the cumulative sum of all prior layer contributions — dominated by the 3 preceding SWA layers. Exp 2c is required to resolve this.
+- **Next**: Exp 2b (train/test split to check generalization), Exp 2c (delta-attribution probe to distinguish H1 vs H2)
 
 ### Exp 2b — Positional Probing v2 (train/test split) → **RQ1** [DONE]
 
@@ -475,30 +501,63 @@ sda212331/
 | 256 | 0.545 | 0.542 | 0.456 |
 
 - **Random baseline**: 0.10 (10-class uniform)
-- **Key finding**: both Global and SWA test accuracy ~0.52–0.55 — well above chance, near-identical
-- **RQ1 conclusion**: NoPE Global layers encode positional information at the same level as SWA layers. Preceding RoPE-based SWA layers inject positional info which Global layers propagate forward.
-- **Note**: high overfit gap (~0.45) due to small prompt count (30). Effect is real but effect size limited by dataset size. PyTorch probe in future experiments will enable larger datasets.
+- **RQ1 finding (preliminary, unreliable at current sample size)**: Both Global and SWA hidden states encode positional information above chance (test acc ~0.52–0.55 vs. 0.10 baseline). Near-identical accuracy between Global and SWA is consistent with both H1 and H2 — **this does not resolve RQ1**. Exp 2c is required before this becomes a paper claim.
+- **Reliability warning**: Train acc ≈ 1.0, test acc ≈ 0.54, overfit gap ≈ 0.45 — this is severe overfitting with only 30 prompts. Each test fold (with 5-fold CV) would contain ~6 samples for a 10-class problem. The above-chance result is suggestive but not paper-grade evidence. **Must replicate with >= 300 prompts, PyTorch GPU probe (Section 7c), and >= 5-fold cross-validation before citing in the paper. Add bootstrap 95% CI on test accuracy.**
 - **Output**: `outputs/exp2b_positional_probe_v2/`
 
 ---
 
 ## 6. Remaining experiments (priority order)
 
-### Exp 3b — SWA Mask Injection Ablation ⭐ (Priority 2, methodologically superior) → **RQ3**
+### Exp 2c — Delta-Attribution Probe (Priority 1) → **RQ1** — resolves H1 vs. H2
+
+**Goal**: Determine whether Global layers actively encode positional information (H1) or merely propagate SWA's signal unchanged (H2).
+
+**Method**:
+- For each Global layer index `i` in `[3, 7, 11, ..., 63]`:
+  - Register forward hooks to capture `h_in[i]` (hidden state at Global layer **input**, before attention sublayer) and `h_out[i]` (after attention + residual add)
+  - Fit separate linear probes on `h_in[i]` and `h_out[i]`
+  - Report `delta_acc[i] = acc(h_out[i]) - acc(h_in[i])`
+- Run the same analysis on SWA layers as a baseline
+
+**Interpretation**:
+- `delta_acc ≈ 0` at all Global layers → H2 (propagation only; SWA layers are the source)
+- `delta_acc > 0` at some Global layers, and Global delta > SWA delta → H1 (Global encodes)
+- `delta_acc > 0` at SWA layers but ≈ 0 at Global layers → confirms RoPE is the sole source
+
+**Sample size and runtime**:
+- >= 300 prompts from WikiText-103/KLUE-MRC corpus
+- PyTorch GPU probe (Section 7c), >= 5-fold cross-validation, bootstrap 95% CI
+- VRAM: model (65GB) + one forward pass activations (~1GB for 256-token prompt) → fits in 85GB A100
+- Runtime: ~25 min extraction (300 × ~5s per forward pass) + < 5 min GPU probe training
+
+### Exp 2b (Upgraded) — Rerun with >= 300 prompts + PyTorch probe (Priority 2)
+
+Fixes the reliability problem in current Exp 2b (n=30, sklearn, single split):
+- Replace `sklearn.LogisticRegression` with PyTorch GPU probe (see Section 7c)
+- >= 300 prompts sampled from WikiText-103 / KLUE-MRC corpus
+- 5-fold or 10-fold stratified cross-validation
+- Bootstrap 95% CI on test accuracy
+- **Prerequisite for citing any RQ1 result in the paper**
+
+### Exp 3b — SWA Mask Injection Ablation (Priority 3) → **RQ3**
 - Injects SWA window mask into Global layers via `register_forward_pre_hook`
-- Converts Global → "behaves like SWA" → isolates pure NoPE long-range attention effect
+- Converts Global → "behaves like SWA" → isolates pure NoPE long-range effect
 - Uses real text (WikiText-103 / KLUE-MRC) to avoid repetition bias
-- Includes automatic statistical tests (t-test, Cohen's d)
+- Measure: perplexity change at token positions > 4,096 (requires sequence length > 4,096)
+- Apply `compare_groups()` for Welch t + Cohen's d
+- **See Section 2b for pass/fail criteria**
 
-### Exp 3 — Global Zero-Output Ablation (Priority 3) → **RQ3**
+### Exp 3 — Global Zero-Output Ablation (Priority 4) → **RQ3**
 - Replaces Global layer self_attn output with zeros → removes all attention contribution
-- **Note**: methodologically aggressive (removes attention entirely, not SWA-like conversion)
-- **Value**: comparing Exp 3b vs Exp 3 results reveals the difference between the two ablation strategies
+- More aggressive ablation than Exp 3b; comparison between the two is methodologically informative
+- **See Section 2b for pass/fail criteria**
 
-### Exp 4 — Long Context Hook Analysis (Priority 4) → **RQ3**
+### Exp 4 — Long Context Hook Analysis (Priority 5) → **RQ3**
 - Collects attention stats via hooks for 2,048–8,192 tokens (avoids OOM)
 - Confirms whether SWA distance saturates above 4,096 while Global keeps growing
-- Reproduces "Lost in the Middle" effect on EXAONE 4.5
+- **See Section 2b for pass/fail criteria**
+- **See Section 10 for external validity constraints on what this length range can support**
 
 ---
 
@@ -518,11 +577,12 @@ python3 nope_analysis/experiments/exp1_attention_entropy.py
 python3 nope_analysis/experiments/exp1b_long_input.py
 python3 nope_analysis/experiments/exp2_positional_probe.py
 python3 nope_analysis/experiments/exp2b_positional_probe_v2.py
-python3 nope_analysis/experiments/exp3b_swa_mask_ablation.py   # ⭐ run before exp3
+python3 nope_analysis/experiments/exp2c_delta_probe.py         # resolves RQ1 H1 vs H2 — run before exp3b
+python3 nope_analysis/experiments/exp3b_swa_mask_ablation.py   # run before exp3
 python3 nope_analysis/experiments/exp3_swa_ablation.py
 python3 nope_analysis/experiments/exp4_long_context.py
 
-# Pre-download corpus (run once before Exp 3b / Exp 4)
+# Pre-download corpus (run once before Exp 2c / Exp 3b / Exp 4)
 python3 -c "from nope_analysis.corpus.downloader import download_all; download_all()"
 
 # Statistical tests (after experiment completes)
@@ -541,11 +601,11 @@ git push
 
 ### Model loading — do not break this rule
 ```python
-# ❌ forbidden
+# Forbidden
 from transformers import AutoModelForCausalLM
 model = AutoModelForCausalLM.from_pretrained(...)  # fails: config_type mismatch
 
-# ✅ correct
+# Correct
 from nope_analysis.loader import load_model_and_tokenizer  # includes CONFIG patch
 model, tokenizer = load_model_and_tokenizer()
 # internally uses Exaone4_5_ForConditionalGeneration + attn_implementation='eager'
@@ -560,7 +620,7 @@ Each folder: `{arxiv_id}/paper.pdf` + `fulltext.txt` + `images/` + `metadata.jso
 
 | arXiv ID | Title | Year | Relevance |
 |----------|-------|------|-----------|
-| 2604.08644 | **EXAONE 4.5 Technical Report** ⭐ | 2026 | the model we analyze — NoPE, SWA, 262K context details |
+| 2604.08644 | **EXAONE 4.5 Technical Report** | 2026 | the model we analyze — NoPE, SWA, 262K context details |
 | 2507.11407 | EXAONE 4.0 Technical Report | 2025 | base LM of EXAONE 4.5, Reasoning mode design (Topic C background) |
 | 2601.01739 | K-EXAONE Technical Report | 2026 | MoE architecture, Korean specialization (Topic D background) |
 | 2503.12524 | EXAONE Deep: Reasoning Enhanced | 2025 | reasoning-enhanced model, directly relevant to Topics C and I |
@@ -580,24 +640,24 @@ text = Path('papers/2604.08644/fulltext.txt').read_text(encoding='utf-8')
 sklearn does not support GPU → 32 vCPUs run at 100% for ~107 minutes while A100 sits idle at 0%.
 
 ```
-sklearn LogisticRegression on (3000 × 5120), 192 fits:  ~107 min on CPU
-PyTorch linear layer equivalent on A100:                 ~1 min on GPU  (~100× faster)
+sklearn LogisticRegression on (3000 x 5120), 192 fits:  ~107 min on CPU
+PyTorch linear layer equivalent on A100:                 ~1 min on GPU  (~100x faster)
 ```
 
 **Fix**: replace sklearn probe with PyTorch for any new experiment that uses probing:
 ```python
-# ❌ slow — do not use for new probe experiments
+# Slow — do not use for new probe experiments
 from sklearn.linear_model import LogisticRegression
 clf = LogisticRegression(max_iter=300).fit(X_train, y_train)
 
-# ✅ fast — use this instead
+# Fast — use this instead
 import torch, torch.nn as nn
 probe = nn.Linear(hidden_size, n_bins).to(model.device)
 optimizer = torch.optim.Adam(probe.parameters(), lr=1e-3)
 # train with cross-entropy loss for ~100 epochs
 ```
 
-Exp 2b already ran with sklearn (results valid). Future probe experiments (Topic D, F, I) must use PyTorch.
+Exp 2b already ran with sklearn (results saved, but n=30 and overfit). Exp 2c and upgraded Exp 2b must use PyTorch with >= 300 prompts and k-fold CV.
 
 ---
 
@@ -610,7 +670,9 @@ Exp 2b already ran with sklearn (results valid). Future probe experiments (Topic
 5. Every experiment saves: `summary.json` + `results.jsonl` + charts
 6. `stats.jsonl` is append-only — never overwrite (reproducibility)
 7. SVD can be skipped with `--no-spectral` — not required
-8. **Probe fitting must use PyTorch (GPU), not sklearn (CPU)** — see Section 7c above
+8. **Probe fitting must use PyTorch (GPU), not sklearn (CPU)** — see Section 7c
+9. **Always apply statistical tests** (`compare_groups()` from `statistical_tests.py`) before calling any observed difference "significant" or "meaningful"
+10. **Apply the RQ3 operational definition** (Section 2b) before running or interpreting Exp 3/3b/4
 
 ---
 
@@ -634,6 +696,41 @@ Exp 2b already ran with sklearn (results valid). Future probe experiments (Topic
 
 8. Explain the exploratory nature of this research — why is the experiment plan not fixed?
 
+9. **(New)** State hypotheses H1 and H2 for RQ1. What experiment distinguishes them, and how does the delta-attribution method work?
+
+10. **(New)** State the RQ3 operational definition from Section 2b. What are the three conditions, and what majority-vote rule determines the conclusion?
+
+11. **(New)** The model supports 262K context but experiments stay under 8K. What claims can and cannot be made from results in this range? (See Section 10.)
+
 ---
 
-*Last updated: 2026-04-26 — ephemeral/multi-cloud setup 절차 추가, loader.py 경로 주의사항 추가*
+## 10. Computational Scope and External Validity
+
+**Gap**: The model supports 262,144-token context. All experiments in this study use sequences of <= 8,192 tokens (< 3.2% of the maximum context length).
+
+### Why experiments are bounded at 8K
+
+Eager attention (required for weight extraction via hooks) stores the full attention matrix, which scales as O(n²) in sequence length and O(n² × n_heads × n_layers) in total memory. At 262K tokens with 33B model parameters already occupying 65GB, a full forward pass with eager attention is not feasible on a single A100 80GB. Even at 8,192 tokens, memory pressure limits batch size to 1.
+
+### What the experimental range supports
+
+| Experiment | Seq length | Claim supported | Claim NOT supported |
+|-----------|-----------|----------------|---------------------|
+| Exp 1 / 1b | <= 2,048 | Entropy and distance patterns diverge as length increases within SWA window | Behavior at lengths >> window |
+| Exp 2 / 2b / 2c | <= 256 | Positional linearity of short/medium sequences | Long-context positional encoding |
+| Exp 3b / 3 | <= 4,096 (ideally > 4,096) | Ablation effect near window boundary | Effect at 262K |
+| Exp 4 | <= 8,192 | SWA saturation hypothesis up to 2× window | Behavior beyond 8K |
+
+### Claims that cannot be made from this study
+
+- "NoPE Global Attention enables 262K-token recall" — not tested
+- "Mechanistic findings at 2K hold at 262K" — extrapolation only, not measured
+- "EXAONE 4.5 achieves better long-context performance than comparable models" — no comparative benchmarks
+
+### Recommended affordable long-context proxy test
+
+Needle-in-a-haystack retrieval at 4,096–8,192 tokens: insert a key-value fact at a position > 4,096 tokens (beyond SWA window), ask the model to retrieve it, measure hit rate with vs. without Global attention ablated (Exp 3b hook). This provides a behavioral (not purely mechanistic) data point for RQ3 at lengths where SWA cannot attend to the needle but Global can. Even a single-condition version of this test substantially strengthens the external validity of the RQ3 conclusion.
+
+---
+
+*Last updated: 2026-04-26 — Scientific audit applied: fixed RQ1 logical leap (H1/H2 distinction, Exp 2c added), added Exp 2b reliability warning, corrected Exp 1b "meaningful reversal" to require statistical test, added RQ3 operational definition (Section 2b), added related architecture positioning note (Section 2), added computational scope section (Section 10), converted Korean setup sections to English, added design rules 9-10.*
