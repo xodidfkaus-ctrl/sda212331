@@ -34,6 +34,7 @@ import matplotlib.pyplot as plt
 from nope_analysis.loader import load_model_and_tokenizer, load_config, get_global_layer_indices
 from nope_analysis.corpus.downloader import build_input_from_corpus
 from nope_analysis.analysis.statistical_tests import compare_groups, report_stats, save_stats_report
+from nope_analysis.analysis.auto_validate import validate_experiment
 
 OUT_DIR = Path('/home/elicer/sda212331/outputs/exp3b_swa_mask_ablation')
 OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -61,24 +62,53 @@ def build_swa_causal_mask(seq_len: int, window: int, device, dtype=torch.bfloat1
 
 
 def verify_hook_works(model, tokenizer, global_layers, device):
-    """Hook 작동 확인: attention entropy가 실제로 달라지는지 검증."""
-    test_ids = tokenizer("hello world test verify hook", return_tensors='pt')['input_ids'].to(device)
+    """
+    Hook 작동 확인: NLL 비교 방식.
+    SWA_WINDOW(4096)보다 짧은 입력은 실제 마스크와 차이 없으므로,
+    tiny window(1 토큰)로 임시 마스크를 주입해 NLL 변화 여부로 hook 동작을 검증.
+    """
+    text = "The attention mechanism in transformer models allows each token to attend " \
+           "to all other tokens in the sequence weighted by relevance scores."
+    test_ids = tokenizer(text, return_tensors='pt')['input_ids'].to(device)
     seq_len = test_ids.shape[1]
+    print(f"[Hook 검증] seq_len={seq_len}, tiny_window=1")
+
+    nll_before = model(input_ids=test_ids, labels=test_ids).loss.item()
+
+    # 윈도우 1: 각 토큰이 자기 자신만 볼 수 있음 → NLL 급증 예상
+    dtype = next(model.parameters()).dtype
+    tiny_mask = build_swa_causal_mask(seq_len, 1, device, dtype=dtype)
+
+    global_set = set(global_layers)
+    handles = []
+    try:
+        layers = model.model.language_model.layers
+    except AttributeError:
+        try:
+            layers = model.model.language_model.model.layers
+        except AttributeError:
+            layers = model.model.layers
+
+    def make_tiny_hook():
+        def hook(module, args, kwargs):
+            if 'attention_mask' in kwargs:
+                kwargs['attention_mask'] = tiny_mask
+            elif len(args) >= 4:
+                args = args[:3] + (tiny_mask,) + args[4:]
+            return args, kwargs
+        return hook
+
+    for i in global_set:
+        if i < len(layers):
+            h = layers[i].self_attn.register_forward_pre_hook(make_tiny_hook(), with_kwargs=True)
+            handles.append(h)
 
     with torch.no_grad():
-        out1 = model(test_ids, output_attentions=True)
-    e_before = out1.attentions[global_layers[0]].float().mean().item()
-    del out1
-
-    handles = register_swa_mask_hooks(model, global_layers, seq_len, device)
-    with torch.no_grad():
-        out2 = model(test_ids, output_attentions=True)
-    e_after = out2.attentions[global_layers[0]].float().mean().item()
+        nll_after = model(input_ids=test_ids, labels=test_ids).loss.item()
     remove_hooks(handles)
-    del out2
 
-    print(f"[Hook 검증] attn mean: before={e_before:.6f}, after={e_after:.6f}")
-    if abs(e_before - e_after) < 1e-7:
+    print(f"[Hook 검증] NLL: before={nll_before:.4f}, after(window=1)={nll_after:.4f}, Δ={nll_after-nll_before:+.4f}")
+    if abs(nll_after - nll_before) < 0.01:
         raise RuntimeError(
             "❌ Hook이 아무 효과 없음. attention_mask 주입 실패.\n"
             "EXAONE self_attn이 attention_mask를 kwargs로 받지 않을 수 있음. 중단합니다."
@@ -102,10 +132,15 @@ def register_swa_mask_hooks(model, global_layers, seq_len: int, device):
             return args, kwargs
         return hook
 
+    # Exaone4_5_ForConditionalGeneration → .model (Exaone4_5_Model)
+    #   → .language_model (Exaone4Model, AutoModel base) → .layers
     try:
-        layers = model.language_model.model.layers
+        layers = model.model.language_model.layers
     except AttributeError:
-        layers = model.model.layers
+        try:
+            layers = model.model.language_model.model.layers
+        except AttributeError:
+            layers = model.model.layers
 
     for i in global_set:
         if i < len(layers):
@@ -221,6 +256,20 @@ def run():
     plot_results(results)
     save_summary(results)
     run_stats(results)
+
+    # Pre-registered auto_validate call (Rule R2)
+    beyond = [r['delta_nll'] for r in results if r['exceeds_swa_window']]
+    within = [r['delta_nll'] for r in results if not r['exceeds_swa_window']]
+    if beyond and within:
+        validate_experiment(
+            experiment_id="e005",
+            comparisons={"delta_nll": (beyond, within)},
+            output_dir=OUT_DIR,
+            label_a="beyond_4096",
+            label_b="within_4096",
+        )
+    else:
+        print("[auto_validate] Skipped — insufficient data (beyond or within group empty)")
 
 
 def plot_results(results):

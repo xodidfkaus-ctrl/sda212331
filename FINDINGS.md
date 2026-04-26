@@ -98,16 +98,24 @@ PRE-REGISTERED)
 
 ## RQ3 — Causal Contribution of Global to Long-Range Dependency
 
-### F3.1 — Causal ablation verdict: PENDING [e005, e006, e007]
-
-All three RQ3 experiments are pre-registered but not yet run.
+### F3.1 — Causal ablation verdict: INCONCLUSIVE (1 of 3 complete) [e005, e006, e007]
 
 **Decision rule** (2-of-3 majority, from HANDOVER.md Section 2b and PREREGISTRATION.md):
-1. [e005] SWA mask injection → perplexity increase at pos > 4,096, d ≥ 0.5
-2. [e006] Global zero-output → perplexity degradation, d ≥ 0.5
-3. [e007] Global distance growth diverges from SWA saturation at ≥ 2 length conditions
+1. [e005] SWA mask injection → perplexity increase at pos > 4,096, d ≥ 0.5 → **INCONCLUSIVE** (OOM; zero beyond-window data)
+2. [e006] Global zero-output → perplexity degradation, d ≥ 0.5 → PENDING
+3. [e007] Global distance growth diverges from SWA saturation at ≥ 2 length conditions → PENDING
 
 H3_alt (Global contributes causally) requires ≥ 2 of 3 conditions with d ≥ 0.5.
+Current tally: 0 VALIDATED / 1 INCONCLUSIVE / 2 PENDING.
+
+**e005 note**: The experiment failed to collect any beyond-window data. OOM at seq_len ≥ 5120
+on A100 80GB PCIe with `attn_implementation='eager'`. The design requires a narrower SWA window
+or a different memory strategy before it can produce evidence for or against H3b_alt.
+See ANALYSIS.md Deviation 1 and "Recommended Next Steps."
+
+**Critical implication for e006 and e007**: Even if both return VALIDATED, the 2-of-3 rule
+would be satisfied. However, if either also returns INCONCLUSIVE/FAILED, H3_alt cannot be
+supported. With e005 eliminated, the RQ3 verdict depends entirely on e006 + e007.
 
 ---
 
@@ -140,4 +148,4 @@ See HANDOVER.md Section 10 for full discussion.
 
 ---
 
-*Last updated: 2026-04-26 | Pending findings: F1.2, F2.3, F3.1 (awaiting e005–e008)*
+*Last updated: 2026-04-26 | Pending findings: F1.2, F2.3, F3.1 (e005 INCONCLUSIVE; e006–e008 not yet run)*

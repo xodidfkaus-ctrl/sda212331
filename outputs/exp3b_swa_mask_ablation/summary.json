@@ -1,0 +1,65 @@
+{
+  "method": "swa_mask_injection",
+  "description": "Global layers forced to use SWA window mask; NoPE long-range contribution measured via PPL delta",
+  "within_swa_window": {
+    "lengths": [
+      1024,
+      1024,
+      1024,
+      1024,
+      1024,
+      2048,
+      2048,
+      2048,
+      2048,
+      2048,
+      3072,
+      3072,
+      3072,
+      3072,
+      3072,
+      4096,
+      4096,
+      4096,
+      4096,
+      4096
+    ],
+    "mean_delta_nll": 0.0,
+    "mean_delta_ppl": 0.0
+  },
+  "beyond_swa_window": {
+    "lengths": [],
+    "mean_delta_nll": null,
+    "mean_delta_ppl": null
+  },
+  "per_length": {
+    "1024": {
+      "ppl_baseline": 1.3283180171835418,
+      "ppl_swa_masked": 1.3283180171835418,
+      "delta_nll": 0.0,
+      "delta_ppl": 0.0,
+      "corpus": "fallback"
+    },
+    "2048": {
+      "ppl_baseline": 1.1474290488082053,
+      "ppl_swa_masked": 1.1474290488082053,
+      "delta_nll": 0.0,
+      "delta_ppl": 0.0,
+      "corpus": "fallback"
+    },
+    "3072": {
+      "ppl_baseline": 1.0999872657837302,
+      "ppl_swa_masked": 1.0999872657837302,
+      "delta_nll": 0.0,
+      "delta_ppl": 0.0,
+      "corpus": "fallback"
+    },
+    "4096": {
+      "ppl_baseline": 1.0776829596099224,
+      "ppl_swa_masked": 1.0776829596099224,
+      "delta_nll": 0.0,
+      "delta_ppl": 0.0,
+      "corpus": "fallback"
+    }
+  }
+}
