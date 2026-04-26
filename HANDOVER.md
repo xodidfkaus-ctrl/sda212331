@@ -109,7 +109,15 @@ loader: OK
 ```
 
 다른 클라우드면 GPU 이름이 다를 수 있음. **중요한 것은 `CUDA: True`와 `loader: OK`**.
-최소 요구 VRAM: **40GB** (모델 bfloat16 로드 기준 ~33GB 필요)
+
+**최소 요구 VRAM: 80GB** (모델 bfloat16 = 65GB + 활성화 메모리)
+
+| GPU | VRAM | 실험 가능 여부 |
+|-----|------|--------------|
+| A100 80GB (full) | 80GB | ✅ 모든 실험 가능 |
+| H100 80GB | 80GB | ✅ 모든 실험 가능 |
+| A100 MIG 3g.40gb | 40GB | ❌ seq>2048에서 OOM |
+| A6000 48GB | 48GB | ❌ 부족 |
 
 ---
 
@@ -300,7 +308,7 @@ If there are unpushed results from the previous session, push them first.
 |------|-------|
 | GitHub | https://github.com/xodidfkaus-ctrl/sda212331 |
 | Environment | Elice Cloud — **ephemeral, resets on restart** |
-| GPU | **A100 80GB × 1, MIG mode (42.4GB slice)** — sufficient for this research. `device_map='auto'` handles allocation. |
+| GPU | **A100 80GB × 1 (전체, MIG 아님)** 이상 필수. 모델 65GB + 활성화 메모리 때문에 최소 80GB VRAM 필요. MIG 40GB 슬라이스는 Exp 3b 이후 실험 불가. |
 | Model path | `/home/elicer/sda212331/model_cache/` (64GB, **deleted on session end**) |
 | Working directory | `/home/elicer/sda212331/` |
 

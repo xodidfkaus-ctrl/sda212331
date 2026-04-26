@@ -40,36 +40,61 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 TARGET_LENGTHS = [1024, 2048, 3072, 4096, 5120, 6144]
 SWA_WINDOW = 4096
+N_SAMPLES = 5  # 길이당 샘플 수 (통계 검정 유효성 확보)
 
 
-def build_swa_causal_mask(seq_len: int, window: int, device) -> torch.Tensor:
+def build_swa_causal_mask(seq_len: int, window: int, device, dtype=torch.bfloat16) -> torch.Tensor:
     """
     Causal + sliding-window additive mask.
     값: 0 (허용) / -inf (차단)
-    Shape: (1, 1, seq_len, seq_len)  — broadcast over batch and heads
+    Shape: (1, 1, seq_len, seq_len)
     """
-    i = torch.arange(seq_len, device=device).unsqueeze(1)  # (seq, 1)
-    j = torch.arange(seq_len, device=device).unsqueeze(0)  # (1, seq)
-    # causal: j <= i,  window: i - j < window
+    i = torch.arange(seq_len, device=device).unsqueeze(1)
+    j = torch.arange(seq_len, device=device).unsqueeze(0)
     allowed = (j <= i) & ((i - j) < window)
-    mask = torch.where(allowed, torch.zeros(1, device=device), torch.full((1,), float('-inf'), device=device))
+    mask = torch.where(
+        allowed,
+        torch.zeros(1, device=device, dtype=dtype),
+        torch.full((1,), float('-inf'), device=device, dtype=dtype),
+    )
     return mask.view(1, 1, seq_len, seq_len)
 
 
-def register_swa_mask_hooks(model, global_layers, seq_len: int, device):
-    """
-    Global 레이어의 forward 직전에 attention_mask를 SWA 마스크로 교체.
+def verify_hook_works(model, tokenizer, global_layers, device):
+    """Hook 작동 확인: attention entropy가 실제로 달라지는지 검증."""
+    test_ids = tokenizer("hello world test verify hook", return_tensors='pt')['input_ids'].to(device)
+    seq_len = test_ids.shape[1]
 
-    EXAONE self_attn forward 시그니처에서 attention_mask는 kwargs로 전달됨.
-    with_kwargs=True 훅으로 kwargs를 직접 수정한다.
-    """
-    swa_mask = build_swa_causal_mask(seq_len, SWA_WINDOW, device)
+    with torch.no_grad():
+        out1 = model(test_ids, output_attentions=True)
+    e_before = out1.attentions[global_layers[0]].float().mean().item()
+    del out1
+
+    handles = register_swa_mask_hooks(model, global_layers, seq_len, device)
+    with torch.no_grad():
+        out2 = model(test_ids, output_attentions=True)
+    e_after = out2.attentions[global_layers[0]].float().mean().item()
+    remove_hooks(handles)
+    del out2
+
+    print(f"[Hook 검증] attn mean: before={e_before:.6f}, after={e_after:.6f}")
+    if abs(e_before - e_after) < 1e-7:
+        raise RuntimeError(
+            "❌ Hook이 아무 효과 없음. attention_mask 주입 실패.\n"
+            "EXAONE self_attn이 attention_mask를 kwargs로 받지 않을 수 있음. 중단합니다."
+        )
+    print("✅ Hook 작동 확인됨\n")
+
+
+def register_swa_mask_hooks(model, global_layers, seq_len: int, device):
+    """Global 레이어의 forward 직전에 attention_mask를 SWA 마스크로 교체."""
+    dtype = next(model.parameters()).dtype
+    swa_mask = build_swa_causal_mask(seq_len, SWA_WINDOW, device, dtype=dtype)
     global_set = set(global_layers)
     handles = []
 
     def make_hook(layer_idx):
         def hook(module, args, kwargs):
-            # attention_mask가 kwargs에 있으면 교체, args에 있으면 교체
             if 'attention_mask' in kwargs:
                 kwargs['attention_mask'] = swa_mask
             elif len(args) >= 4:
@@ -102,17 +127,50 @@ def compute_perplexity(model, input_ids):
     return float(np.exp(nll)), nll
 
 
+def build_input_safe(tokenizer, target_len, device, sample_idx=0):
+    """corpus에서 sample_idx번째 청크를 가져옴. 없으면 fallback."""
+    try:
+        input_ids = build_input_from_corpus('en', target_len, tokenizer, sample_idx=sample_idx).to(device)
+        return input_ids, 'en (WikiText-103)'
+    except Exception:
+        pass
+    try:
+        input_ids = build_input_from_corpus('ko', target_len, tokenizer, sample_idx=sample_idx).to(device)
+        return input_ids, 'ko (KLUE-MRC)'
+    except Exception:
+        pass
+    BASE_TEXT = (
+        "The development of large language models has fundamentally changed natural language processing. "
+        "These models learn from vast amounts of text and can generate coherent contextually appropriate responses. "
+        "The hybrid attention mechanism combining sliding window attention and global attention is a key innovation. "
+        "Sliding window attention limits each token to attending only within a local window of fixed size. "
+        "Global attention layers allow every token to attend to every other token in the full sequence. "
+        "NoPE removes explicit position encodings from global attention layers in transformer models. "
+        "인공지능 기술의 발전은 현대 사회에 많은 변화를 가져오고 있다. "
+        "특히 자연어 처리 분야에서의 혁신은 인간과 기계 사이의 소통 방식을 근본적으로 바꾸고 있다. "
+    )
+    offset = sample_idx * (target_len // 4)
+    repeated = BASE_TEXT * (target_len // 60 + 20)
+    ids = tokenizer(repeated, return_tensors='pt', add_special_tokens=True)['input_ids']
+    start = min(offset, max(0, ids.shape[1] - target_len))
+    return ids[:, start:start + target_len].to(device), 'fallback'
+
+
 def run():
     cfg = load_config()
     global_layers = get_global_layer_indices(cfg)
     print(f"Global (NoPE) layers: {global_layers}")
     print(f"SWA window: {SWA_WINDOW} tokens")
-    print(f"Target lengths: {TARGET_LENGTHS}\n")
+    print(f"Target lengths: {TARGET_LENGTHS}")
+    print(f"Samples per length: {N_SAMPLES}\n")
     print("Method: SWA mask injection (replaces Global NoPE attention mask with SWA band mask)")
     print("This converts Global layers to behave like SWA, isolating the NoPE long-range effect.\n")
 
     model, tokenizer = load_model_and_tokenizer()
-    device = model.device
+    device = next(model.parameters()).device
+
+    # Hook 작동 검증 (실험 시작 전 필수)
+    verify_hook_works(model, tokenizer, global_layers, device)
 
     results = []
 
@@ -120,62 +178,41 @@ def run():
         print(f"\n{'='*60}")
         print(f"Length = {target_len} tokens  {'[SWA 윈도우 초과]' if target_len > SWA_WINDOW else '[SWA 윈도우 내]'}")
 
-        # Real corpus input (mixed en/ko)
-        try:
-            input_ids = build_input_from_corpus('en', target_len, tokenizer).to(device)
-            lang_used = 'en (WikiText-103)'
-        except Exception as e:
-            print(f"  [warn] English corpus failed ({e}), trying Korean...")
+        for sample_idx in range(N_SAMPLES):
             try:
-                input_ids = build_input_from_corpus('ko', target_len, tokenizer).to(device)
-                lang_used = 'ko (KLUE-MRC)'
-            except Exception as e2:
-                print(f"  [warn] Korean corpus also failed ({e2}), using fallback BASE_TEXT")
-                BASE_TEXT = (
-                    "The development of large language models has fundamentally changed natural language processing. "
-                    "These models learn from vast amounts of text and can generate coherent contextually appropriate responses. "
-                    "The hybrid attention mechanism combining sliding window attention and global attention is a key innovation. "
-                    "Sliding window attention limits each token to attending only within a local window of fixed size. "
-                    "Global attention layers allow every token to attend to every other token in the full sequence. "
-                    "NoPE removes explicit position encodings from global attention layers in transformer models. "
-                    "인공지능 기술의 발전은 현대 사회에 많은 변화를 가져오고 있다. "
-                    "특히 자연어 처리 분야에서의 혁신은 인간과 기계 사이의 소통 방식을 근본적으로 바꾸고 있다. "
-                )
-                repeated = BASE_TEXT * (target_len // 60 + 10)
-                ids = tokenizer(repeated, return_tensors='pt', add_special_tokens=True)['input_ids']
-                input_ids = ids[:, :target_len].to(device)
-                lang_used = 'fallback'
+                input_ids, lang_used = build_input_safe(tokenizer, target_len, device, sample_idx)
+                print(f"  Sample {sample_idx+1}/{N_SAMPLES}: {input_ids.shape[1]} tokens, corpus={lang_used}")
 
-        print(f"  Input: {input_ids.shape[1]} tokens, corpus={lang_used}")
+                ppl_base, nll_base = compute_perplexity(model, input_ids)
 
-        # Condition A: baseline
-        ppl_base, nll_base = compute_perplexity(model, input_ids)
-        print(f"  Baseline   PPL: {ppl_base:.4f}  NLL: {nll_base:.4f}")
+                handles = register_swa_mask_hooks(model, global_layers, target_len, device)
+                ppl_swa, nll_swa = compute_perplexity(model, input_ids)
+                remove_hooks(handles)
 
-        # Condition B: SWA mask injected into Global layers
-        handles = register_swa_mask_hooks(model, global_layers, target_len, device)
-        ppl_swa, nll_swa = compute_perplexity(model, input_ids)
-        remove_hooks(handles)
-        print(f"  SWA-masked PPL: {ppl_swa:.4f}  NLL: {nll_swa:.4f}")
+                delta_nll = nll_swa - nll_base
+                delta_ppl = ppl_swa - ppl_base
+                print(f"    Baseline PPL={ppl_base:.4f}  SWA-masked PPL={ppl_swa:.4f}  ΔNLL={delta_nll:+.4f}")
 
-        delta_nll = nll_swa - nll_base
-        delta_ppl = ppl_swa - ppl_base
-        print(f"  ΔNLL: {delta_nll:+.4f}  ΔPPL: {delta_ppl:+.4f}  (양수 = NoPE Global의 장거리 기여 확인)")
+                results.append({
+                    'seq_len': target_len,
+                    'sample_idx': sample_idx,
+                    'corpus': lang_used,
+                    'ppl_baseline': ppl_base,
+                    'ppl_swa_masked': ppl_swa,
+                    'nll_baseline': nll_base,
+                    'nll_swa_masked': nll_swa,
+                    'delta_nll': delta_nll,
+                    'delta_ppl': delta_ppl,
+                    'exceeds_swa_window': target_len > SWA_WINDOW,
+                })
 
-        results.append({
-            'seq_len': target_len,
-            'corpus': lang_used,
-            'ppl_baseline': ppl_base,
-            'ppl_swa_masked': ppl_swa,
-            'nll_baseline': nll_base,
-            'nll_swa_masked': nll_swa,
-            'delta_nll': delta_nll,
-            'delta_ppl': delta_ppl,
-            'exceeds_swa_window': target_len > SWA_WINDOW,
-        })
+                del input_ids
+                torch.cuda.empty_cache()
 
-        del input_ids
-        torch.cuda.empty_cache()
+            except torch.cuda.OutOfMemoryError:
+                print(f"  ⚠️ OOM at seq_len={target_len} sample={sample_idx}, skipping remaining samples for this length")
+                torch.cuda.empty_cache()
+                break
 
     with open(OUT_DIR / 'results.jsonl', 'w') as f:
         for r in results:
@@ -274,17 +311,17 @@ def save_summary(results):
 
 def run_stats(results):
     """
-    Statistical test: does ΔNLL differ significantly between within vs beyond SWA window?
-    Uses compare_groups from statistical_tests.py.
+    Statistical test: ΔNLL within vs beyond SWA window.
+    N_SAMPLES per length → within: 2×N_SAMPLES points, beyond: 4×N_SAMPLES points.
     """
     within = [r['delta_nll'] for r in results if not r['exceeds_swa_window']]
     beyond = [r['delta_nll'] for r in results if r['exceeds_swa_window']]
 
+    print(f"\n[stats] within_window n={len(within)}, beyond_window n={len(beyond)}")
     if len(within) < 2 or len(beyond) < 2:
-        print("\n[stats] Not enough data points for t-test (need ≥2 per group).")
+        print("[stats] Not enough data points for t-test (need ≥2 per group). Skipping.")
         return
 
-    from nope_analysis.analysis.statistical_tests import compare_groups, report_stats, save_stats_report
     stat_results = [
         compare_groups(beyond, within, label_a='beyond_4096', label_b='within_4096', metric='delta_nll')
     ]
