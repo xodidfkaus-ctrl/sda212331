@@ -67,6 +67,35 @@ Goals: algorithm understanding, baseline for future EXAONE model comparison, eco
 - Vision encoder: 1.2B, 2D RoPE (separate from LM)
 - Vocab: 153,600 | Context: 262,144
 
+## R6 — Architectural Fact Verification
+
+When making any claim about EXAONE 4.5 architecture (layer count, attention pattern,
+head dimensions, context length, NoPE/SWA structure, training data, license terms, etc.),
+you MUST first consult `papers/MODEL_FACTS.md` or `papers/model_card_EXAONE-4.5-33B.md`
+and cite the source.
+
+**Mandatory consultation triggers** — read MODEL_FACTS.md before responding when
+the user or your own reasoning involves:
+
+- Numerical specs (layers, heads, dim, context length, parameter count)
+- Architectural claims ("uses X attention", "applies Y normalization")
+- Comparison claims ("similar to / different from DeepSeek-V3 / Llama / Qwen")
+- License or usage scope ("can we publish", "is this commercial use")
+- Training data or capabilities ("trained on X tokens", "supports language Y")
+- Any sentence containing the phrases "EXAONE 4.5 has...", "EXAONE 4.5 uses...", "EXAONE 4.5 supports..."
+
+**Behavior on uncertainty**: If a fact is needed but not present in MODEL_FACTS.md,
+do not guess from memory. Either:
+(a) extract the answer from `papers/2604.08644/fulltext.txt` (technical report) and
+    cite the section, OR
+(b) state "this fact is not in our reference set; user must verify" and stop.
+
+**Forbidden**: Citing architecture facts from training-data memory without checking
+MODEL_FACTS.md. Memory drift on these specifics has caused real errors in this project
+before (the "first open SWA+NoPE model" claim, retracted).
+
+---
+
 ## Pre-registration Rules (HARD — do not break under any circumstances)
 
 These rules exist to prevent HARKing (Hypothesizing After Results are Known), which
