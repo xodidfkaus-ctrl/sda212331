@@ -4,13 +4,15 @@ auto_validate.py — Pre-registration enforcement and automated validation.
 Every experiment script must call validate_experiment() before exit.
 The function:
   1. Locates experiments/{exp_id}_*/PLAN.md — raises FileNotFoundError if missing
-  2. Parses the `## Decision Criteria` YAML block from PLAN.md
-  3. Checks sample size sufficiency
-  4. Runs Welch t-test + Cohen's d + bootstrap CI (via statistical_tests.py)
-  5. Applies Holm-Bonferroni correction for multiple comparisons
-  6. Tags result: VALIDATED / FAILED / INCONCLUSIVE
-  7. Writes {output_dir}/stats.json
-  8. Returns the full stats dict
+  2. Asserts PLAN.md was committed to git BEFORE results.jsonl was written to disk
+     — raises RegistrationOrderError if ordering is violated (Rule R1)
+  3. Parses the `## Decision Criteria` YAML block from PLAN.md
+  4. Checks sample size sufficiency
+  5. Runs Welch t-test + Cohen's d + bootstrap CI (via statistical_tests.py)
+  6. Applies Holm-Bonferroni correction for multiple comparisons
+  7. Tags result: VALIDATED / FAILED / INCONCLUSIVE
+  8. Writes {output_dir}/stats.json
+  9. Returns the full stats dict
 
 Usage (at end of every experiment script):
     from nope_analysis.analysis.auto_validate import validate_experiment
@@ -30,7 +32,9 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -40,22 +44,36 @@ import yaml
 from nope_analysis.analysis.statistical_tests import compare_groups, report_stats
 
 
+# ── Custom exceptions ─────────────────────────────────────────────────────────
+
+class RegistrationOrderError(RuntimeError):
+    """
+    Raised when results.jsonl was written to disk before PLAN.md was committed
+    to git, violating pre-registration Rule R1.
+
+    To fix: set 'retrofitted: true' in the ```criteria block of PLAN.md and
+    mark findings as exploratory in ANALYSIS.md.
+    See STATISTICAL_PROTOCOL.md §7.
+    """
+
+
 # ── Path helpers ──────────────────────────────────────────────────────────────
+
+def _find_repo_root(start: Path) -> Path:
+    """Walk up from start until a directory containing experiments/ is found."""
+    for parent in [start, *start.parents]:
+        if (parent / "experiments").is_dir():
+            return parent
+    raise FileNotFoundError(
+        f"Could not locate repo root (no 'experiments/' directory) from {start}. "
+        "Ensure you are running from within the sda212331 repo."
+    )
+
 
 def _find_experiment_dir(experiment_id: str, repo_root: Path | None = None) -> Path:
     """Find experiments/{exp_id}_*/ directory."""
     if repo_root is None:
-        # Walk up from this file to find repo root (contains experiments/)
-        here = Path(__file__).resolve()
-        for parent in here.parents:
-            if (parent / "experiments").is_dir():
-                repo_root = parent
-                break
-        else:
-            raise FileNotFoundError(
-                f"Could not locate 'experiments/' directory from {here}. "
-                "Ensure you are running from within the sda212331 repo."
-            )
+        repo_root = _find_repo_root(Path(__file__).resolve())
 
     exp_base = repo_root / "experiments"
     matches = sorted(exp_base.glob(f"{experiment_id}_*"))
@@ -64,10 +82,76 @@ def _find_experiment_dir(experiment_id: str, repo_root: Path | None = None) -> P
             f"No experiment directory found for '{experiment_id}' in {exp_base}.\n"
             f"Expected a directory named '{experiment_id}_<slug>'.\n"
             f"Create PLAN.md first: experiments/{experiment_id}_<slug>/PLAN.md\n"
-            f"Pre-registration rule: PLAN.md must be committed BEFORE results exist."
+            f"Pre-registration rule R1: PLAN.md must be committed BEFORE results exist."
         )
     return matches[0]
 
+
+# ── Pre-registration order check ──────────────────────────────────────────────
+
+def _get_plan_commit_timestamp(plan_path: Path, repo_root: Path) -> datetime:
+    """
+    Return the UTC datetime of PLAN.md's oldest git commit.
+    Raises RegistrationOrderError if the file has never been committed.
+    """
+    try:
+        rel = plan_path.relative_to(repo_root)
+    except ValueError:
+        rel = plan_path  # absolute path fallback for git
+
+    result = subprocess.run(
+        ["git", "log", "--format=%aI", "--", str(rel)],
+        capture_output=True, text=True, cwd=str(repo_root),
+    )
+    lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    if not lines:
+        raise RegistrationOrderError(
+            f"PLAN.md has no git commit history: {plan_path}\n"
+            f"Pre-registration Rule R1 violated: commit PLAN.md before running the experiment.\n"
+            f"  git add {rel}\n"
+            f"  git commit -m 'pre-register: {plan_path.parent.name}'\n"
+            f"If results already exist, set 'retrofitted: true' in the ```criteria block."
+        )
+    # git log returns newest-first; last line is the oldest (creation) commit
+    return datetime.fromisoformat(lines[-1])
+
+
+def _check_preregistration_order(
+    plan_path: Path,
+    results_jsonl: Path,
+    repo_root: Path,
+) -> None:
+    """
+    Assert PLAN.md was committed to git before results.jsonl was written to disk.
+
+    Invariant enforced: git_commit_time(PLAN.md) < fs_mtime(results.jsonl)
+
+    - If results.jsonl does not exist, the experiment has not run yet; skip check.
+    - If PLAN.md has no git commit history, raise RegistrationOrderError.
+    - If PLAN.md was committed after results.jsonl was written, raise RegistrationOrderError
+      with instructions to mark the experiment as retrofitted.
+    """
+    if not results_jsonl.exists():
+        return  # experiment not yet run — nothing to compare
+
+    plan_committed_at = _get_plan_commit_timestamp(plan_path, repo_root)
+    results_written_at = datetime.fromtimestamp(
+        results_jsonl.stat().st_mtime, tz=timezone.utc
+    )
+
+    if plan_committed_at > results_written_at:
+        raise RegistrationOrderError(
+            f"Pre-registration order violated for {plan_path.parent.name}:\n"
+            f"  PLAN.md first committed : {plan_committed_at.isoformat()}\n"
+            f"  results.jsonl written   : {results_written_at.isoformat()}\n"
+            f"  PLAN.md was committed AFTER the experiment ran.\n"
+            f"  Fix: set 'retrofitted: true' in the ```criteria block of PLAN.md\n"
+            f"  and mark all findings as exploratory in ANALYSIS.md.\n"
+            f"  See STATISTICAL_PROTOCOL.md §7."
+        )
+
+
+# ── YAML criteria parser ──────────────────────────────────────────────────────
 
 def _parse_plan_criteria(plan_path: Path) -> dict:
     """
@@ -179,15 +263,31 @@ def validate_experiment(
 
     Returns:
         Full stats dict written to stats.json.
+
+    Raises:
+        FileNotFoundError: if experiments/{exp_id}_*/PLAN.md is missing.
+        RegistrationOrderError: if results.jsonl predates PLAN.md's git commit (Rule R1).
+        ValueError: if PLAN.md criteria block is missing or malformed.
     """
+    # Detect repo root once; share across all helpers
+    if repo_root is None:
+        repo_root = _find_repo_root(Path(__file__).resolve())
+
     # 1. Locate and validate PLAN.md
     exp_dir = _find_experiment_dir(experiment_id, repo_root)
     plan_path = exp_dir / "PLAN.md"
     if not plan_path.exists():
         raise FileNotFoundError(
             f"PLAN.md not found at {plan_path}.\n"
-            f"Pre-registration rule: create and commit PLAN.md before running the experiment."
+            f"Pre-registration Rule R1: create and commit PLAN.md before running the experiment."
         )
+
+    # 2. Enforce pre-registration ordering (Rule R1)
+    _check_preregistration_order(
+        plan_path=plan_path,
+        results_jsonl=Path(output_dir) / "results.jsonl",
+        repo_root=repo_root,
+    )
 
     criteria = _parse_plan_criteria(plan_path)
     retrofitted = criteria.get("retrofitted", False)
@@ -199,7 +299,7 @@ def validate_experiment(
         print(f"  WARNING: criteria are RETROFITTED (post-hoc). Results tagged accordingly.")
     print(f"{'='*60}")
 
-    # 2. Run statistical tests for each comparison
+    # 3. Run statistical tests for each comparison
     n_tests = len(comparisons)
     all_stats = []
     raw_p_values = []
@@ -214,7 +314,7 @@ def validate_experiment(
         raw_p_values.append(stat["p_value"])
         print(f"  {report_stats(stat)}")
 
-    # 3. Apply Holm correction
+    # 4. Apply Holm correction
     if n_tests > 1:
         corrected_p = _holm_correct(raw_p_values)
     else:
@@ -224,7 +324,7 @@ def validate_experiment(
         stat["p_holm"] = corrected_p[i]
         stat["n_tests_total"] = n_tests
 
-    # 4. Determine per-comparison and overall verdicts
+    # 5. Determine per-comparison and overall verdicts
     verdicts = []
     for stat in all_stats:
         v = _verdict(
@@ -242,7 +342,7 @@ def validate_experiment(
     if "FAILED" in verdicts:
         overall = "FAILED"
 
-    # 5. Build output dict
+    # 6. Build output dict
     output = {
         "experiment_id": experiment_id,
         "plan_path": str(plan_path),
@@ -253,14 +353,14 @@ def validate_experiment(
         "comparisons": all_stats,
     }
 
-    # 6. Write stats.json
+    # 7. Write stats.json
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     stats_path = output_dir / "stats.json"
     with open(stats_path, "w") as f:
         json.dump(output, f, indent=2)
 
-    # 7. Print summary
+    # 8. Print summary
     verdict_line = {
         "VALIDATED": "VALIDATED — criteria met",
         "FAILED": "FAILED — null not rejected or effect too small",
@@ -272,7 +372,7 @@ def validate_experiment(
     print(f"  stats.json written to: {stats_path}")
     print(f"{'='*60}\n")
 
-    # 8. Warn if ANALYSIS.md is missing
+    # 9. Warn if ANALYSIS.md is missing
     analysis_path = exp_dir / "ANALYSIS.md"
     if not analysis_path.exists():
         print(
