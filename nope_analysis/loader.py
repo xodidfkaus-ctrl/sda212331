@@ -10,6 +10,7 @@ import torch
 from transformers import AutoConfig, AutoTokenizer
 from transformers.models.exaone4_5.modeling_exaone4_5 import Exaone4_5_ForConditionalGeneration
 
+# ⚠️ 클라우드 환경이 바뀌면 이 경로를 수정해야 함 (홈 디렉토리가 /home/elicer/ 가 아닐 수 있음)
 MODEL_PATH = '/home/elicer/sda212331/model_cache/models--LGAI-EXAONE--EXAONE-4.5-33B/snapshots/58d6616991a60a67f84be82ad241d5bc9668a55c'
 
 

@@ -10,65 +10,153 @@
 
 ## 00. Ephemeral Session Quick Setup (run this first, every session)
 
-**This is a cloud environment (Elice). All pip packages, git credentials, and model cache are wiped on every session restart.**
-The researcher will give you a GitHub PAT and (if model download is needed) a HuggingFace token at the start of the session.
+**모든 클라우드 환경은 세션 재시작 시 pip 패키지, git credentials, 모델 캐시가 초기화된다.**
+클라우드가 바뀌어도 동일하다. 매 세션 시작 시 아래 순서를 전부 실행할 것.
 
-### What the researcher should say to start a session:
-> "HANDOVER.md 보고 셋업해줘. GitHub PAT는 `ghp_xxx`야. HF 토큰은 `hf_xxx`야."
+### 연구자가 세션 시작 시 Claude에게 할 말
+> "HANDOVER.md 보고 셋업해줘. GitHub PAT는 `ghp_xxx`야."
 
-### Full setup sequence (copy-paste in order)
+- GitHub PAT: git push/pull 인증용. 반드시 제공해야 함.
+- HuggingFace 토큰: **불필요** (EXAONE-4.5-33B는 public 모델, gated=False 확인됨)
 
-**Step A — Clone repo (if not already present)**
+---
+
+### Step A — 작업 디렉토리 확인 및 repo 클론
+
 ```bash
-ls /home/elicer/sda212331/ 2>/dev/null || git clone https://PAT@github.com/xodidfkaus-ctrl/sda212331.git /home/elicer/sda212331
+# 현재 홈 디렉토리 확인 (클라우드마다 다를 수 있음)
+echo "홈: $HOME"
+
+# repo가 없으면 클론 (PAT를 실제 값으로 교체)
+REPO_DIR="$HOME/sda212331"
+ls "$REPO_DIR" 2>/dev/null || git clone https://PAT@github.com/xodidfkaus-ctrl/sda212331.git "$REPO_DIR"
+cd "$REPO_DIR"
 ```
 
-**Step B — Git auth (required every session)**
+> **주의**: 클라우드가 바뀌면 홈 경로가 `/home/elicer/` 가 아닐 수 있다.
+> `loader.py`의 `MODEL_PATH`가 `/home/elicer/sda212331/model_cache/...` 로 하드코딩되어 있으므로,
+> 홈이 다를 경우 `nope_analysis/loader.py` 13번째 줄의 `MODEL_PATH`를 수정해야 한다.
+
+---
+
+### Step B — Git auth 설정 (매 세션 필수)
+
 ```bash
-cd /home/elicer/sda212331
+cd "$HOME/sda212331"
 git remote set-url origin https://PAT@github.com/xodidfkaus-ctrl/sda212331.git
 git config user.email "xodidfkaus@gmail.com"
 git config user.name "elicer"
+# 확인
+git push --dry-run 2>&1 | head -3
 ```
 
-**Step C — Install dependencies (required every session)**
+---
+
+### Step C — GPU / CUDA 버전 확인 (의존성 설치 전 반드시 먼저)
+
 ```bash
+nvidia-smi | grep "CUDA Version"
+python3 -c "import subprocess; r=subprocess.run(['nvidia-smi','--query-gpu=name,memory.total','--format=csv,noheader'],capture_output=True,text=True); print(r.stdout)"
+```
+
+결과에 따라 torch 설치 버전이 달라진다:
+
+| CUDA Driver 버전 | torch 설치 명령 |
+|-----------------|----------------|
+| 12.1 ~ 12.2 | `pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu121` |
+| 12.4 ~ 12.5 | `pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu124` |
+| 12.6+ | `pip install torch --index-url https://download.pytorch.org/whl/cu126` |
+
+> **Elice A100 환경 기준**: CUDA driver 12.2 → `cu121` 사용 (2026-04-26 확인)
+
+---
+
+### Step D — 의존성 설치 (매 세션 필수)
+
+```bash
+cd "$HOME/sda212331"
 pip install -r requirements.txt -q
 pip install git+https://github.com/nuxlear/transformers.git@add-exaone4_5 -q
-# torch must be CUDA 12.1 compatible (driver is 12.2)
+# torch는 Step C에서 확인한 버전으로 설치 (Elice 기준: cu121)
 pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu121 -q
 ```
 
-**Step D — Verify GPU + loader**
+> **왜 nuxlear fork?** PyPI transformers에는 `exaone4_5` 모듈이 없음. nuxlear fork의 `add-exaone4_5` 브랜치에만 있음.
+> `requirements.txt`의 `transformers>=4.40.0` 로는 설치되지 않으므로 반드시 별도로 설치해야 함.
+
+---
+
+### Step E — GPU + loader 검증
+
 ```bash
-python3 -c "import torch; print('CUDA:', torch.cuda.is_available()); p=torch.cuda.get_device_properties(0); print(f'GPU: {p.name}, {p.total_memory/1e9:.1f}GB')"
-python3 -c "import sys; sys.path.insert(0,'.'); from nope_analysis import loader; print('loader: OK')"
+python3 -c "
+import torch
+print('CUDA:', torch.cuda.is_available())
+if torch.cuda.is_available():
+    p = torch.cuda.get_device_properties(0)
+    print(f'GPU: {p.name}, {p.total_memory/1e9:.1f}GB')
+else:
+    print('❌ CUDA 없음 — Step C/D 재확인')
+"
+python3 -c "import sys; sys.path.insert(0,'$HOME/sda212331'); from nope_analysis import loader; print('loader: OK')"
 ```
-Expected:
+
+정상 출력 예시 (Elice A100):
 ```
 CUDA: True
 GPU: NVIDIA A100 80GB PCIe MIG 3g.40gb, 42.4GB
 loader: OK
 ```
 
-**Step E — Model cache (only if running experiments that load the full model)**
+다른 클라우드면 GPU 이름이 다를 수 있음. **중요한 것은 `CUDA: True`와 `loader: OK`**.
+최소 요구 VRAM: **40GB** (모델 bfloat16 로드 기준 ~33GB 필요)
+
+---
+
+### Step F — 모델 캐시 확인 및 다운로드
+
 ```bash
-ls /home/elicer/sda212331/model_cache/models--LGAI-EXAONE--EXAONE-4.5-33B/snapshots/ 2>/dev/null \
+ls "$HOME/sda212331/model_cache/models--LGAI-EXAONE--EXAONE-4.5-33B/snapshots/" 2>/dev/null \
+  && echo "모델 캐시 존재" \
   || python3 -c "
 from huggingface_hub import snapshot_download
-snapshot_download('LGAI-EXAONE/EXAONE-4.5-33B',
-    cache_dir='/home/elicer/sda212331/model_cache',
-    token='HF_TOKEN_HERE',
-    ignore_patterns=['*.bin','*.pt'])
+snapshot_download(
+    'LGAI-EXAONE/EXAONE-4.5-33B',
+    cache_dir='$HOME/sda212331/model_cache',
+    ignore_patterns=['*.bin','*.pt'],
+)
+print('다운로드 완료')
 "
-# Takes ~20 min, 64GB — only needed for Exp 1–4 (full model forward pass)
+# 약 20~40분, 64GB. 토큰 불필요(public 모델).
 ```
 
-**Step F — Git sync check**
+> **모델 캐시는 매 세션 삭제된다.** 실험 실행 전 반드시 재다운로드 필요.
+> 다운로드 중에도 다른 셋업 작업은 진행 가능.
+
+---
+
+### Step G — Git 동기화 확인
+
 ```bash
+cd "$HOME/sda212331"
 git log --oneline -3
 git status
 ```
+
+이전 세션의 results가 push되지 않았다면 지금 push.
+
+---
+
+### 체크리스트 요약
+
+| 항목 | 확인 방법 | 통과 조건 |
+|------|----------|----------|
+| repo 존재 | `ls $HOME/sda212331` | 파일 목록 출력 |
+| Git auth | `git push --dry-run` | 오류 없음 |
+| CUDA | `python3 -c "import torch; print(torch.cuda.is_available())"` | `True` |
+| VRAM ≥ 40GB | GPU 확인 출력 | memory ≥ 40GB |
+| loader import | `from nope_analysis import loader` | 오류 없음 |
+| 모델 캐시 | `ls model_cache/.../snapshots/` | 폴더 존재 |
 
 ---
 
@@ -540,4 +628,4 @@ Exp 2b already ran with sklearn (results valid). Future probe experiments (Topic
 
 ---
 
-*Last updated: 2026-04-26*
+*Last updated: 2026-04-26 — ephemeral/multi-cloud setup 절차 추가, loader.py 경로 주의사항 추가*
