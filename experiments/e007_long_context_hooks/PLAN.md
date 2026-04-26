@@ -50,10 +50,13 @@ min_n_per_group: 5
 n_simultaneous_tests: 4
 bootstrap_n: 10000
 retrofitted: false
+force_verdict: INCONCLUSIVE
 note: |
-  n=5 is below standard minimum (30). Results tagged EXPLORATORY regardless of p-value.
-  This is a memory-constrained experiment (each forward pass requires ~70GB at 8192 tokens).
-  The 5-sequence minimum is the practical limit on a single A100 80GB.
+  n=5 is below standard minimum (30). force_verdict: INCONCLUSIVE is set so that
+  auto_validate enforces this regardless of observed d or p-values. This prevents
+  a spuriously VALIDATED result from a memory-constrained n=5 run.
+  The 5-sequence minimum is the practical limit on a single A100 80GB (~70GB/pass at 8192 tokens).
+  Results must be reported as EXPLORATORY in the paper regardless of the verdict tag.
 ```
 
 ---

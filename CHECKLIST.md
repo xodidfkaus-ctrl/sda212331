@@ -140,4 +140,27 @@ A null result — "NoPE Global does not contribute measurably at the tested leng
 
 ---
 
+## Infrastructure audit trail
+
+### Pre-registration system: two commits, both required
+
+The pre-registration enforcement infrastructure (PREREGISTRATION.md, STATISTICAL_PROTOCOL.md,
+auto_validate.py, EXPERIMENT_LOG.md, FINDINGS.md, experiments/e001–e008 scaffolding) was
+introduced in two sequential commits on 2026-04-26. Both are required for a complete system.
+
+| Commit | Purpose | Gap |
+|--------|---------|-----|
+| `bd9b933` | Initial scaffolding: all files, PLAN.md existence check, Holm correction, verdict logic | Checked PLAN.md *existence* only — a researcher could retroactively write PLAN.md, commit it, and obtain a non-retrofitted verdict. Honor-system gap. |
+| `4dbbee4` | **Fix**: added `_check_preregistration_order()` — asserts `git_commit_time(PLAN.md) < fs_mtime(results.jsonl)`, raises `RegistrationOrderError` if violated | Gap closed. |
+
+**What this means for auditors**: `bd9b933` alone is not a complete pre-registration system.
+The timestamp ordering enforcement in `4dbbee4` is not optional; it is what makes Rule R1
+machine-enforced rather than honor-based. Both commits together constitute pre-registration
+infrastructure v1.
+
+*This note was added as part of a post-audit fix (2026-04-26). The gap existed for < 10 minutes
+before being closed. No experiments ran between the two commits.*
+
+---
+
 *Version: 2026-04-26*

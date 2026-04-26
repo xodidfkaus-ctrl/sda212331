@@ -205,14 +205,19 @@ def _holm_correct(p_values: List[float]) -> List[float]:
     for i, p in enumerate(sorted_p):
         corrected[order[i]] = min(p * (k - i), 1.0)
 
-    # Enforce monotonicity: corrected p cannot decrease as original p increases
-    for i in range(k - 2, -1, -1):
-        corrected[order[i]] = max(corrected[order[i]], corrected[order[i + 1]])
+    # Enforce monotonicity: corrected p must be non-decreasing in sorted rank order.
+    # Forward pass: p_holm(i) = max(p_holm(i), p_holm(i-1)).
+    # Backward would propagate the maximum leftward, inflating the smallest p — wrong.
+    for i in range(1, k):
+        corrected[order[i]] = max(corrected[order[i]], corrected[order[i - 1]])
 
     return corrected.tolist()
 
 
 # ── Verdict logic ─────────────────────────────────────────────────────────────
+
+_VALID_VERDICTS = {"VALIDATED", "FAILED", "INCONCLUSIVE"}
+
 
 def _verdict(
     n_a: int,
@@ -221,6 +226,24 @@ def _verdict(
     p_holm: float,
     criteria: dict,
 ) -> str:
+    """
+    Return per-comparison verdict.
+
+    force_verdict (optional criteria field): short-circuits all logic and returns
+    the specified verdict regardless of n, d, or p. Use for experiments where the
+    verdict is determined by design (e.g., memory-constrained n=5 must be INCONCLUSIVE).
+    Valid values: VALIDATED, FAILED, INCONCLUSIVE (case-insensitive).
+    """
+    forced = criteria.get("force_verdict")
+    if forced is not None:
+        upper = str(forced).upper()
+        if upper not in _VALID_VERDICTS:
+            raise ValueError(
+                f"force_verdict must be one of {_VALID_VERDICTS}, got {forced!r}. "
+                f"Check the ```criteria block in PLAN.md."
+            )
+        return upper
+
     min_n = criteria.get("min_n_per_group", 30)
     accept = criteria.get("accept", {})
     min_d = accept.get("min_abs_cohen_d", 0.5)
@@ -238,6 +261,48 @@ def _verdict(
         return "FAILED"
     else:
         return "INCONCLUSIVE"
+
+
+def _aggregate_verdicts(verdicts: List[str], criteria: dict) -> str:
+    """
+    Aggregate per-comparison verdicts into one overall experiment verdict.
+
+    Default (no reject_null_if):
+        Most conservative — any FAILED → FAILED, any INCONCLUSIVE → INCONCLUSIVE.
+
+    With reject_null_if.min_layers_significant: k:
+        The null is rejected (VALIDATED) if at least k comparisons are VALIDATED.
+        Fewer than k validated:
+          → INCONCLUSIVE if any comparison is INCONCLUSIVE
+          → FAILED otherwise
+        Unknown keys inside reject_null_if print a warning and are ignored;
+        they represent criteria that require manual post-hoc verification.
+    """
+    reject_null_if = criteria.get("reject_null_if") or {}
+    _KNOWN_REJECT_KEYS = {"min_layers_significant"}
+    unknown_keys = sorted(set(reject_null_if.keys()) - _KNOWN_REJECT_KEYS)
+    if unknown_keys:
+        print(
+            f"  WARNING: reject_null_if contains keys auto_validate does not enforce: "
+            f"{unknown_keys}. Manual post-hoc check required before marking VALIDATED."
+        )
+
+    min_layers = reject_null_if.get("min_layers_significant")
+    if min_layers is not None:
+        n_validated = sum(1 for v in verdicts if v == "VALIDATED")
+        if n_validated >= min_layers:
+            return "VALIDATED"
+        if "INCONCLUSIVE" in verdicts:
+            return "INCONCLUSIVE"
+        return "FAILED"
+
+    # Default: most conservative
+    overall = "VALIDATED"
+    if "INCONCLUSIVE" in verdicts:
+        overall = "INCONCLUSIVE"
+    if "FAILED" in verdicts:
+        overall = "FAILED"
+    return overall
 
 
 # ── Main public function ──────────────────────────────────────────────────────
@@ -335,12 +400,8 @@ def validate_experiment(
         stat["verdict"] = v
         verdicts.append(v)
 
-    # Overall verdict: most conservative across all comparisons
-    overall = "VALIDATED"
-    if "INCONCLUSIVE" in verdicts:
-        overall = "INCONCLUSIVE"
-    if "FAILED" in verdicts:
-        overall = "FAILED"
+    # Overall verdict via _aggregate_verdicts (respects reject_null_if clauses)
+    overall = _aggregate_verdicts(verdicts, criteria)
 
     # 6. Build output dict
     output = {
