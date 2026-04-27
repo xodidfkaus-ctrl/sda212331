@@ -20,8 +20,11 @@ Do not edit result tags retroactively — append a superseding row instead.
 | e003 | positional_probe | RQ1 | Probe accuracy: Global < SWA (NoPE → weaker position encoding) | RETROFITTED | INCONCLUSIVE | before 2026-04-20 | A100 MIG 3g.40gb (40GB) | [PLAN](experiments/e003_positional_probe/PLAN.md) | [ANALYSIS](experiments/e003_positional_probe/ANALYSIS.md) | not run |
 | e004 | positional_probe_v2 | RQ1 | Train/test split probe: Global test acc < SWA test acc | RETROFITTED | INCONCLUSIVE | before 2026-04-25 | A100 MIG 3g.40gb (40GB) | [PLAN](experiments/e004_positional_probe_v2/PLAN.md) | [ANALYSIS](experiments/e004_positional_probe_v2/ANALYSIS.md) | not run |
 | e005 | swa_mask_ablation | RQ3 | SWA mask injected into Global: perplexity at pos > 4096 increases (d ≥ 0.5) | PRE-REGISTERED 2026-04-26 | INCONCLUSIVE | 2026-04-26 | A100 80GB PCIe | [PLAN](experiments/e005_swa_mask_ablation/PLAN.md) | [ANALYSIS](experiments/e005_swa_mask_ablation/ANALYSIS.md) | not written (OOM — zero beyond-window samples) |
-| e006 | global_zero_ablation | RQ3 | Zero Global attn output: perplexity degrades (d ≥ 0.5) | PRE-REGISTERED 2026-04-26 | PENDING | — | — | [PLAN](experiments/e006_global_zero_ablation/PLAN.md) | [ANALYSIS](experiments/e006_global_zero_ablation/ANALYSIS.md) | — |
-| e007 | long_context_hooks | RQ3 | Global attn distance diverges from SWA at ≥ 2 length conditions above 4096 | PRE-REGISTERED 2026-04-26 | PENDING | — | — | [PLAN](experiments/e007_long_context_hooks/PLAN.md) | [ANALYSIS](experiments/e007_long_context_hooks/ANALYSIS.md) | — |
+| e006 | global_zero_ablation | RQ3 | Zero Global attn output: perplexity degrades (d ≥ 0.5) | PRE-REGISTERED 2026-04-26 | FAILED | 2026-04-27 | 2× A100 80GB PCIe | [PLAN](experiments/e006_global_zero_ablation/PLAN.md) | [ANALYSIS](experiments/e006_global_zero_ablation/ANALYSIS.md) | independent-groups Welch t wrong test |
+| e006b | global_zero_ablation_v2 | RQ3 | Zero Global attn output: mean ΔNLL > 0 (one-sample t, d_z ≥ 0.3) | PRE-REGISTERED 2026-04-27 | VALIDATED | 2026-04-27 | 2× A100 80GB PCIe | [PLAN](experiments/e006b_global_zero_ablation_v2/PLAN.md) | [ANALYSIS](experiments/e006b_global_zero_ablation_v2/ANALYSIS.md) | [stats.json](outputs/e006b_global_zero_ablation_v2/stats.json) |
+| e007 | long_context_hooks | RQ3 | Global attn distance diverges from SWA at ≥ 2 length conditions above 4096 | PRE-REGISTERED 2026-04-26 | INCONCLUSIVE | 2026-04-27 | 2× A100 80GB PCIe | [PLAN](experiments/e007_long_context_hooks/PLAN.md) | [ANALYSIS](experiments/e007_long_context_hooks/ANALYSIS.md) | output_attentions OOM after 1 sample |
+| e005b | swa_mask_ablation_v2 | RQ3 | SWA mask → ΔNLL > 0 at pos > 4096 (one-sample t, d_z ≥ 0.3) | PRE-REGISTERED 2026-04-27 | PENDING | — | — | [PLAN](experiments/e005b_swa_mask_ablation_v2/PLAN.md) | — | — |
+| e007b | long_context_sparse_hook | RQ3 | Global attn distance diverges from SWA at lengths ≥ 4096 (sparse QK hook) | PRE-REGISTERED 2026-04-27 | PENDING | — | — | [PLAN](experiments/e007b_long_context_sparse_hook/PLAN.md) | — | — |
 | e008 | delta_probe | RQ1 | H1_alt: delta probe acc at Global out > Global in (d ≥ 0.5, p_Holm ≤ 0.01) | PRE-REGISTERED 2026-04-26 | PENDING | — | — | [PLAN](experiments/e008_delta_probe/PLAN.md) | [ANALYSIS](experiments/e008_delta_probe/ANALYSIS.md) | — |
 
 ---
@@ -49,4 +52,4 @@ These results are:
 4. Add a row here with the verdict from `stats.json`.
 5. If the finding is paper-grade, add to `FINDINGS.md` with this experiment's ID.
 
-*Last updated: 2026-04-26*
+*Last updated: 2026-04-27 (session 4) — e006b VALIDATED, e007b/e005b PENDING*
