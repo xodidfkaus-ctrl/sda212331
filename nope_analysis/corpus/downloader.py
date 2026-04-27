@@ -25,7 +25,7 @@ def _load_wikitext103():
     """Load WikiText-103 English articles. Returns list of non-empty paragraphs."""
     try:
         from datasets import load_dataset
-        ds = load_dataset('wikitext', 'wikitext-103-raw-v1', split='train', trust_remote_code=True)
+        ds = load_dataset('wikitext', 'wikitext-103-raw-v1', split='train')
         texts = [row['text'] for row in ds if len(row['text'].strip()) > 200]
         print(f"[corpus] WikiText-103 loaded: {len(texts):,} passages")
         return texts
@@ -38,7 +38,7 @@ def _load_klue_mrc():
     """Load KLUE Machine Reading Comprehension — Korean passages."""
     try:
         from datasets import load_dataset
-        ds = load_dataset('klue', 'mrc', split='train', trust_remote_code=True)
+        ds = load_dataset('klue', 'mrc', split='train')
         texts = [row['context'] for row in ds if len(row['context'].strip()) > 200]
         print(f"[corpus] KLUE-MRC loaded: {len(texts):,} passages")
         return texts
