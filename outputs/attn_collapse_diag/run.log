@@ -1,0 +1,97 @@
+=== Attention Collapse / Local Bias Diagnostic ===
+
+Loading tokenizer...
+Loading model (this may take a few minutes)...
+Loading weights:   0%|          | 0/1049 [00:00<?, ?it/s]Loading weights:   1%|▏         | 15/1049 [00:00<00:09, 109.59it/s]Loading weights:   2%|▏         | 26/1049 [00:00<00:13, 75.52it/s] Loading weights:   3%|▎         | 35/1049 [00:00<00:12, 80.05it/s]Loading weights:   4%|▍         | 44/1049 [00:00<00:15, 63.69it/s]Loading weights:   5%|▍         | 51/1049 [00:00<00:19, 51.18it/s]Loading weights:   6%|▌         | 59/1049 [00:00<00:18, 52.61it/s]Loading weights:   6%|▋         | 68/1049 [00:01<00:16, 61.00it/s]Loading weights:   7%|▋         | 75/1049 [00:01<00:17, 54.28it/s]Loading weights:   8%|▊         | 81/1049 [00:01<00:18, 52.58it/s]Loading weights:   9%|▊         | 91/1049 [00:01<00:15, 62.09it/s]Loading weights:   9%|▉         | 98/1049 [00:01<00:17, 54.48it/s]Loading weights:  10%|▉         | 104/1049 [00:01<00:20, 46.76it/s]Loading weights:  11%|█         | 114/1049 [00:01<00:17, 54.20it/s]Loading weights:  12%|█▏        | 124/1049 [00:02<00:14, 62.60it/s]Loading weights:  12%|█▏        | 131/1049 [00:02<00:16, 57.02it/s]Loading weights:  13%|█▎        | 138/1049 [00:02<00:17, 51.98it/s]Loading weights:  14%|█▍        | 146/1049 [00:02<00:16, 53.31it/s]Loading weights:  15%|█▍        | 157/1049 [00:02<00:15, 58.16it/s]Loading weights:  16%|█▌        | 163/1049 [00:02<00:15, 56.76it/s]Loading weights:  16%|█▌        | 169/1049 [00:03<00:19, 46.16it/s]Loading weights:  17%|█▋        | 180/1049 [00:03<00:14, 58.19it/s]Loading weights:  18%|█▊        | 190/1049 [00:03<00:13, 63.10it/s]Loading weights:  19%|█▉        | 197/1049 [00:03<00:14, 57.99it/s]Loading weights:  19%|█▉        | 204/1049 [00:03<00:17, 49.29it/s]Loading weights:  20%|██        | 212/1049 [00:03<00:17, 49.11it/s]Loading weights:  21%|██        | 221/1049 [00:03<00:14, 56.83it/s]Loading weights:  22%|██▏       | 228/1049 [00:04<00:17, 48.10it/s]Loading weights:  22%|██▏       | 235/1049 [00:04<00:16, 49.04it/s]Loading weights:  23%|██▎       | 245/1049 [00:04<00:14, 55.77it/s]Loading weights:  24%|██▍       | 251/1049 [00:04<00:14, 54.59it/s]Loading weights:  24%|██▍       | 257/1049 [00:04<00:16, 48.35it/s]Loading weights:  25%|██▌       | 267/1049 [00:04<00:15, 52.04it/s]Loading weights:  26%|██▌       | 273/1049 [00:04<00:15, 48.50it/s]Loading weights:  27%|██▋       | 279/1049 [00:05<00:16, 47.93it/s]Loading weights:  27%|██▋       | 287/1049 [00:05<00:14, 54.19it/s]Loading weights:  28%|██▊       | 293/1049 [00:05<00:16, 45.90it/s]Loading weights:  29%|██▊       | 300/1049 [00:05<00:14, 50.78it/s]Loading weights:  29%|██▉       | 306/1049 [00:05<00:14, 50.81it/s]Loading weights:  30%|██▉       | 312/1049 [00:05<00:15, 47.44it/s]Loading weights:  30%|███       | 317/1049 [00:05<00:15, 47.98it/s]Loading weights:  31%|███       | 323/1049 [00:05<00:14, 49.10it/s]Loading weights:  32%|███▏      | 331/1049 [00:06<00:12, 56.24it/s]Loading weights:  32%|███▏      | 337/1049 [00:06<00:14, 47.78it/s]Loading weights:  33%|███▎      | 345/1049 [00:06<00:14, 47.49it/s]Loading weights:  34%|███▎      | 353/1049 [00:06<00:12, 53.99it/s]Loading weights:  34%|███▍      | 359/1049 [00:06<00:15, 45.53it/s]Loading weights:  35%|███▍      | 367/1049 [00:06<00:14, 47.29it/s]Loading weights:  36%|███▌      | 377/1049 [00:07<00:11, 56.24it/s]Loading weights:  37%|███▋      | 383/1049 [00:07<00:12, 51.60it/s]Loading weights:  37%|███▋      | 389/1049 [00:07<00:14, 46.24it/s]Loading weights:  38%|███▊      | 399/1049 [00:07<00:12, 52.39it/s]Loading weights:  39%|███▊      | 405/1049 [00:07<00:13, 47.69it/s]Loading weights:  39%|███▉      | 411/1049 [00:07<00:13, 47.26it/s]Loading weights:  40%|███▉      | 419/1049 [00:07<00:11, 54.41it/s]Loading weights:  41%|████      | 425/1049 [00:08<00:13, 45.70it/s]Loading weights:  41%|████      | 432/1049 [00:08<00:13, 45.06it/s]Loading weights:  42%|████▏     | 441/1049 [00:08<00:11, 53.93it/s]Loading weights:  43%|████▎     | 447/1049 [00:08<00:12, 46.72it/s]Loading weights:  43%|████▎     | 455/1049 [00:08<00:12, 47.66it/s]Loading weights:  44%|████▍     | 463/1049 [00:08<00:10, 54.41it/s]Loading weights:  45%|████▍     | 469/1049 [00:08<00:12, 46.98it/s]Loading weights:  45%|████▌     | 476/1049 [00:09<00:11, 51.73it/s]Loading weights:  46%|████▌     | 482/1049 [00:09<00:11, 47.52it/s]Loading weights:  47%|████▋     | 488/1049 [00:09<00:12, 46.66it/s]Loading weights:  47%|████▋     | 496/1049 [00:09<00:11, 48.28it/s]Loading weights:  48%|████▊     | 501/1049 [00:09<00:12, 44.23it/s]Loading weights:  49%|████▊     | 509/1049 [00:09<00:10, 52.11it/s]Loading weights:  49%|████▉     | 515/1049 [00:09<00:11, 47.51it/s]Loading weights:  50%|████▉     | 521/1049 [00:10<00:11, 45.59it/s]Loading weights:  51%|█████     | 531/1049 [00:10<00:10, 50.15it/s]Loading weights:  51%|█████     | 537/1049 [00:10<00:10, 48.41it/s]Loading weights:  52%|█████▏    | 543/1049 [00:10<00:11, 44.54it/s]Loading weights:  53%|█████▎    | 553/1049 [00:10<00:09, 51.23it/s]Loading weights:  53%|█████▎    | 559/1049 [00:10<00:10, 48.56it/s]Loading weights:  54%|█████▍    | 565/1049 [00:10<00:10, 46.97it/s]Loading weights:  55%|█████▍    | 573/1049 [00:11<00:08, 53.83it/s]Loading weights:  55%|█████▌    | 579/1049 [00:11<00:09, 47.85it/s]Loading weights:  56%|█████▌    | 586/1049 [00:11<00:09, 46.58it/s]Loading weights:  57%|█████▋    | 595/1049 [00:11<00:08, 56.08it/s]Loading weights:  57%|█████▋    | 602/1049 [00:11<00:09, 47.70it/s]Loading weights:  58%|█████▊    | 609/1049 [00:11<00:08, 49.44it/s]Loading weights:  59%|█████▉    | 619/1049 [00:11<00:07, 54.15it/s]Loading weights:  60%|█████▉    | 625/1049 [00:12<00:07, 53.25it/s]Loading weights:  60%|██████    | 631/1049 [00:12<00:08, 49.16it/s]Loading weights:  61%|██████    | 641/1049 [00:12<00:07, 52.89it/s]Loading weights:  62%|██████▏   | 647/1049 [00:12<00:08, 47.78it/s]Loading weights:  62%|██████▏   | 653/1049 [00:12<00:08, 47.30it/s]Loading weights:  63%|██████▎   | 663/1049 [00:12<00:07, 53.28it/s]Loading weights:  64%|██████▍   | 669/1049 [00:12<00:07, 48.21it/s]Loading weights:  64%|██████▍   | 674/1049 [00:13<00:07, 48.01it/s]Loading weights:  65%|██████▍   | 679/1049 [00:13<00:08, 45.62it/s]Loading weights:  65%|██████▌   | 686/1049 [00:13<00:07, 48.26it/s]Loading weights:  66%|██████▋   | 696/1049 [00:13<00:07, 45.66it/s]Loading weights:  67%|██████▋   | 705/1049 [00:13<00:06, 54.58it/s]Loading weights:  73%|███████▎  | 769/1049 [00:13<00:01, 187.20it/s]Loading weights:  78%|███████▊  | 823/1049 [00:13<00:00, 270.20it/s]Loading weights:  84%|████████▍ | 882/1049 [00:13<00:00, 350.96it/s]Loading weights:  89%|████████▉ | 937/1049 [00:14<00:00, 404.18it/s]Loading weights:  95%|█████████▍| 993/1049 [00:14<00:00, 443.77it/s]Loading weights: 100%|█████████▉| 1045/1049 [00:14<00:00, 416.38it/s]Loading weights: 100%|██████████| 1049/1049 [00:14<00:00, 73.13it/s] 
+Model loaded.
+Global layers: [3, 7, 11, 15, 19, 23, 27, 31, 35, 39, 43, 47, 51, 55, 59, 63]
+SWA layers (first 8): [0, 1, 2, 4, 5, 6, 8, 9]...
+Test lengths: [2048, 4096, 8192], N_SAMPLES: 3
+
+
+=======================================================
+Length = 2048
+[corpus] Loaded 'en_edgar' from local cache (59,218 passages)
+  sample 1  len=2048
+    mean_entropy          Global=5.9895  SWA=6.2444  gap=-0.2549
+    mean_sink_frac        Global=0.0652  SWA=0.0643  gap=+0.0009
+    mean_local_frac       Global=2.6174  SWA=2.6096  gap=+0.0077
+    mean_distance         Global=430.8464  SWA=434.0254  gap=-3.1789
+  sample 2  len=2048
+    mean_entropy          Global=5.9454  SWA=6.2254  gap=-0.2800
+    mean_sink_frac        Global=0.0670  SWA=0.0643  gap=+0.0027
+    mean_local_frac       Global=2.6142  SWA=2.6089  gap=+0.0053
+    mean_distance         Global=423.8896  SWA=435.1522  gap=-11.2626
+  sample 3  len=2048
+    mean_entropy          Global=5.9319  SWA=6.2288  gap=-0.2969
+    mean_sink_frac        Global=0.0684  SWA=0.0643  gap=+0.0041
+    mean_local_frac       Global=2.6250  SWA=2.6134  gap=+0.0116
+    mean_distance         Global=429.4434  SWA=428.9049  gap=+0.5385
+
+=======================================================
+Length = 4096
+  sample 1  len=4096
+    mean_entropy          Global=6.8000  SWA=7.0822  gap=-0.2822
+    mean_sink_frac        Global=0.0331  SWA=0.0324  gap=+0.0007
+    mean_local_frac       Global=1.3232  SWA=1.3175  gap=+0.0057
+    mean_distance         Global=972.4956  SWA=970.8533  gap=+1.6423
+  sample 2  len=4096
+    mean_entropy          Global=6.7708  SWA=7.0712  gap=-0.3005
+    mean_sink_frac        Global=0.0340  SWA=0.0324  gap=+0.0017
+    mean_local_frac       Global=1.3245  SWA=1.3176  gap=+0.0070
+    mean_distance         Global=961.8558  SWA=978.4625  gap=-16.6067
+  sample 3  len=4096
+    mean_entropy          Global=6.7592  SWA=7.0741  gap=-0.3149
+    mean_sink_frac        Global=0.0348  SWA=0.0324  gap=+0.0024
+    mean_local_frac       Global=1.3291  SWA=1.3195  gap=+0.0096
+    mean_distance         Global=958.1198  SWA=968.1563  gap=-10.0365
+
+=======================================================
+Length = 8192
+  sample 1  len=8192
+    mean_entropy          Global=7.5544  SWA=7.8508  gap=-0.2964
+    mean_sink_frac        Global=0.0168  SWA=0.0163  gap=+0.0005
+    mean_local_frac       Global=0.6694  SWA=0.6653  gap=+0.0040
+    mean_distance         Global=2022.2323  SWA=2006.4855  gap=+15.7468
+  sample 2  len=8192
+    mean_entropy          Global=7.5345  SWA=7.8475  gap=-0.3131
+    mean_sink_frac        Global=0.0173  SWA=0.0163  gap=+0.0010
+    mean_local_frac       Global=0.6714  SWA=0.6654  gap=+0.0059
+    mean_distance         Global=1952.6836  SWA=2013.5477  gap=-60.8641
+  sample 3  len=8192
+    mean_entropy          Global=7.5295  SWA=7.8506  gap=-0.3211
+    mean_sink_frac        Global=0.0177  SWA=0.0163  gap=+0.0014
+    mean_local_frac       Global=0.6736  SWA=0.6665  gap=+0.0071
+    mean_distance         Global=1967.7912  SWA=2010.3712  gap=-42.5800
+
+======================================================================
+SUMMARY — Global vs SWA per metric per length
+======================================================================
+
+Length=2048  (n_global_obs=48, n_swa_obs=144)
+  mean_entropy            Global=5.9556  SWA=6.2329  gap=-0.2773  
+  mean_sink_frac          Global=0.0669  SWA=0.0643  gap=+0.0026  
+  mean_local_frac         Global=2.6189  SWA=2.6106  gap=+0.0082  ⚠️ LOCAL?
+  mean_distance           Global=428.0598  SWA=432.6942  gap=-4.6343  
+
+Length=4096  (n_global_obs=48, n_swa_obs=144)
+  mean_entropy            Global=6.7766  SWA=7.0758  gap=-0.2992  
+  mean_sink_frac          Global=0.0340  SWA=0.0324  gap=+0.0016  
+  mean_local_frac         Global=1.3256  SWA=1.3182  gap=+0.0074  ⚠️ LOCAL?
+  mean_distance           Global=964.1571  SWA=972.4907  gap=-8.3336  
+
+Length=8192  (n_global_obs=48, n_swa_obs=144)
+  mean_entropy            Global=7.5395  SWA=7.8496  gap=-0.3102  
+  mean_sink_frac          Global=0.0173  SWA=0.0163  gap=+0.0010  
+  mean_local_frac         Global=0.6714  SWA=0.6657  gap=+0.0057  
+  mean_distance           Global=1980.9024  SWA=2010.1348  gap=-29.2324  
+
+Results saved: /home/elicer/sda212331/outputs/attn_collapse_diag/results.jsonl
+
+=======================================================
+COLLAPSE ASSESSMENT:
+At 8192 tokens:
+  Global entropy=7.5395  SWA entropy=7.8496
+  Global sink_frac=0.0173  (>0.3 = possible collapse)
+  Global local_frac=0.6714  (>0.7 = local bias)
+  ✓  No strong collapse signal — SWA window-forcing more likely explanation
