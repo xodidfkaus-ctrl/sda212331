@@ -1,0 +1,12 @@
+{
+  "2048": {
+    "global_nope": {
+      "entropy_mean": 3.5658757239580154,
+      "attn_distance_mean": 549.4781551361084
+    },
+    "swa": {
+      "entropy_mean": 3.5396666874488196,
+      "attn_distance_mean": 441.61424318949383
+    }
+  }
+}

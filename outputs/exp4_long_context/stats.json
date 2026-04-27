@@ -1,0 +1,52 @@
+{
+  "experiment_id": "e007",
+  "plan_path": "/home/elicer/sda212331/experiments/e007_long_context_hooks/PLAN.md",
+  "retrofitted": false,
+  "overall_verdict": "INCONCLUSIVE",
+  "n_comparisons": 1,
+  "criteria": {
+    "metric": "attn_distance_divergence",
+    "direction": "global_nope > swa",
+    "accept": {
+      "min_abs_cohen_d": 0.5,
+      "max_p_holm_corrected": 0.01,
+      "min_length_conditions_significant": 2
+    },
+    "min_n_per_group": 5,
+    "n_simultaneous_tests": 4,
+    "bootstrap_n": 10000,
+    "retrofitted": false,
+    "force_verdict": "INCONCLUSIVE",
+    "note": "n=5 is below standard minimum (30). force_verdict: INCONCLUSIVE is set so that\nauto_validate enforces this regardless of observed d or p-values. This prevents\na spuriously VALIDATED result from a memory-constrained n=5 run.\nThe 5-sequence minimum is the practical limit on a single A100 80GB (~70GB/pass at 8192 tokens).\nResults must be reported as EXPLORATORY in the paper regardless of the verdict tag.\n"
+  },
+  "comparisons": [
+    {
+      "metric": "attn_distance_divergence",
+      "label_a": "global_nope",
+      "label_b": "swa",
+      "n_a": 16,
+      "n_b": 48,
+      "mean_a": 549.4781551361084,
+      "mean_b": 441.61424318949383,
+      "std_a": 122.00220034358718,
+      "std_b": 112.23626256209388,
+      "diff_a_minus_b": 107.86391194661456,
+      "t_stat": 3.1232504051242147,
+      "p_value": 0.004615276732394145,
+      "cohens_d": 0.9406029852252037,
+      "ci_a_95": [
+        492.3078492164612,
+        605.164876127243
+      ],
+      "ci_b_95": [
+        409.0771701097488,
+        473.08485093911486
+      ],
+      "significant": true,
+      "effect_size_label": "large",
+      "p_holm": 0.004615276732394145,
+      "n_tests_total": 1,
+      "verdict": "INCONCLUSIVE"
+    }
+  ]
+}
