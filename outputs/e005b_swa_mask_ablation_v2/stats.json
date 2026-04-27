@@ -1,0 +1,52 @@
+{
+  "experiment_id": "e005b",
+  "plan_path": "/home/elicer/sda212331/experiments/e005b_swa_mask_ablation_v2/PLAN.md",
+  "retrofitted": false,
+  "overall_verdict": "VALIDATED",
+  "n_comparisons": 1,
+  "criteria": {
+    "metric": "delta_nll_beyond_window",
+    "direction": "delta > 0",
+    "test_type": "one_sample",
+    "accept": {
+      "min_abs_cohen_d": 0.5,
+      "max_p_holm_corrected": 0.05
+    },
+    "min_n_per_group": 10,
+    "n_simultaneous_tests": 1,
+    "bootstrap_n": 2000,
+    "retrofitted": false,
+    "note": "Primary metric: mean per-sequence delta_nll at token positions > 4096.\nmin_n_per_group=10 is the minimum for beyond-window sequences;\nif OOM prevents collecting 10 sequences, verdict is INCONCLUSIVE.\n"
+  },
+  "comparisons": [
+    {
+      "metric": "delta_nll_beyond_window",
+      "label_a": "delta_nll_beyond",
+      "label_b": "null_mu=0.0",
+      "n_a": 20,
+      "n_b": 0,
+      "mean_a": 0.01722214025212452,
+      "mean_b": 0.0,
+      "std_a": 0.016470510915147504,
+      "std_b": 0.0,
+      "diff_a_minus_b": 0.01722214025212452,
+      "t_stat": 4.676221219873544,
+      "p_value": 0.00016452138568588472,
+      "cohens_d": 1.0456348525464236,
+      "ci_a_95": [
+        0.01075843484431971,
+        0.02446711657423293
+      ],
+      "ci_b_95": [
+        0.0,
+        0.0
+      ],
+      "significant": true,
+      "effect_size_label": "large",
+      "test_type": "one_sample_t",
+      "p_holm": 0.00016452138568588472,
+      "n_tests_total": 1,
+      "verdict": "VALIDATED"
+    }
+  ]
+}

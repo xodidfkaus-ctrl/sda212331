@@ -109,35 +109,76 @@ vs 5.4 GB full. Script: `nope_analysis/experiments/exp4_long_context_sparse_hook
 
 ## RQ3 — Causal Contribution of Global to Long-Range Dependency
 
-### F3.1 — Causal ablation verdict: IN PROGRESS (1 of 3 confirmed) [e005b, e006b, e007b]
+### F3.1 — Causal ablation verdict: H3_alt SUPPORTED (2 of 3 conditions VALIDATED) [e005b, e006b, e007b]
 
 **Decision rule** (2-of-3 majority, from HANDOVER.md Section 2b and PREREGISTRATION.md):
 
-| # | Condition | Experiment | Verdict | Notes |
-|---|-----------|-----------|---------|-------|
-| 1 | SWA mask → PPL↑ at pos > 4,096 | e005b (redesign of e005) | **PENDING** | script written, not yet run |
-| 2 | Zero Global output → PPL↑ | **e006b** (redesign of e006) | **✅ VALIDATED** | ΔNLL=+0.169, t=21.95, p≈2e-27, d_z=3.10 |
-| 3 | Global distance diverges from SWA at ≥2 lengths >4,096 | e007b (redesign of e007) | **PENDING** | script written, running |
+| # | Condition | Experiment | Verdict | Key result |
+|---|-----------|-----------|---------|------------|
+| 1 | SWA mask → PPL↑ at pos > 4,096 | **e005b** | **✅ VALIDATED** | Δ_beyond=+0.017 nats, t=4.68, p=0.0002, d_z=1.05 |
+| 2 | Zero Global output → PPL↑ | **e006b** | **✅ VALIDATED** | ΔNLL=+0.169 nats, t=21.95, p≈2e-27, d_z=3.10 |
+| 3 | Global distance > SWA at lengths > 4,096 | e007b | INCONCLUSIVE | Direction reversed: SWA > Global |
 
-H3_alt (Global contributes causally) requires ≥ 2 of 3 conditions VALIDATED.
-**Current tally: 1 VALIDATED / 0 INCONCLUSIVE / 2 PENDING.**
+**H3_alt SUPPORTED: 2 of 3 conditions met.** Moderate pre-registered confirmatory evidence.
 
-**e006b finding**: Zeroing all 16 Global layer attention outputs causes a statistically
-significant and practically large increase in per-token NLL (ΔNLL=+0.169 nats, d_z=3.10, n=50).
-Effect is larger beyond the SWA window (+0.218 nats at seq>4,096) than within (+0.136 nats),
-consistent with H3_alt. However, e006b does NOT distinguish within-window from beyond-window
-causal contribution at the token level — the beyond-window comparison is per-sequence, not
-per-token-position. Per-token filtering is e005b's task.
+---
 
-**Scope warning**: e006b proves Global attention is causally necessary (somewhere). It does
-NOT by itself prove Global contributes to long-range dependency specifically. The long-range
-causal claim requires ≥ 1 of {e005b, e007b} to also VALIDATE.
+**Finding F3.1a — Global attention is causally necessary [e006b]**
 
-**Prior experiments (superseded)**:
-- e005 INCONCLUSIVE: OOM at all beyond-window lengths; zero primary-metric data.
-- e006 FAILED: correct effect present (post-hoc d_z=6.74) but wrong test selected (independent
-  groups instead of paired); FAILED verdict upheld per Rule R5.
-- e007 INCONCLUSIVE: OOM from `output_attentions=True` after 1 sample at 2,048 tokens.
+Zeroing all 16 Global layer attention outputs (before residual add) causes a large, consistent
+NLL increase across all 50 sequences tested (ΔNLL=+0.169 nats, d_z=3.10, p≈2e-27).
+Effect is larger at sequences beyond the SWA window (+0.218 nats) than within (+0.136 nats).
+
+**Correct interpretation**: Global attention output is causally necessary for NLL quality.
+Removing it degrades model performance across all sequence lengths tested.
+
+**NOT supported by e006b alone**: that this effect is specifically from beyond-window
+attention (token positions > 4,096). e005b provides that evidence.
+
+---
+
+**Finding F3.1b — Global's beyond-window attention provides incremental causal benefit [e005b]**
+
+Forcing Global layers to attend only within the SWA window (injecting window=4,096 mask)
+causes a statistically significant NLL increase at token positions > 4,096 tokens
+(Δ_beyond=+0.017 nats, d_z=1.05, p=0.0002, n=20). Within-window tokens are unaffected
+(Δ_within=0.000), confirming the hook correctly isolates the beyond-window regime.
+
+**Magnitude context**:
+| Ablation | Removes | ΔNLL |
+|----------|---------|------|
+| e006b: zero all Global output | All Global attention | +0.169 nats |
+| e005b: SWA-mask Global | Beyond-window attention only | +0.017 nats |
+| Implied within-window contribution | — | ~+0.152 nats |
+
+~90% of Global's causal value is within-window; ~10% is specifically beyond-window.
+The beyond-window contribution is real but modest in absolute terms.
+
+---
+
+**Finding F3.1c — Global attention distance does not exceed SWA at long contexts [e007b, exploratory]**
+
+Contrary to H3d_alt, Global attention mean distance is consistently ≤ SWA distance at
+all tested lengths (2,048–8,192 tokens). The gap grows with length: SWA exceeds Global
+by −26.2 tokens at 8,192 tokens. This is interpreted as a SWA window-forcing effect:
+SWA is constrained to attend within its 4,096-token window, which gives it a near-constant
+mean distance ≈ SWA_window/2 per query position, while Global can distribute attention
+more flexibly (including nearby tokens). This is an exploratory finding — not pre-registered
+in this direction, pseudo-replication issue in stats (see ANALYSIS.md), requires replication.
+
+---
+
+**Prior experiments (superseded by b-variants)**:
+- e005 INCONCLUSIVE (OOM), e006 FAILED (wrong test), e007 INCONCLUSIVE (OOM).
+
+---
+
+**Paper framing guidance**:
+The two validated conditions (e005b + e006b) together support: "NoPE Global attention
+contributes causally to model quality, including a statistically significant incremental
+benefit from attending beyond the SWA window." The effect at beyond-window positions is
+real but small in absolute terms (+0.017 nats). The paper should not overstate this as
+"dramatically improves long-range performance" — it provides modest, consistent benefit.
 
 ---
 
@@ -170,4 +211,4 @@ See HANDOVER.md Section 10 for full discussion.
 
 ---
 
-*Last updated: 2026-04-27 (session 4) | e006b VALIDATED (F3.1 condition 2); e007b running; e005b pending; F1.2/F2.3 await e008/e007b*
+*Last updated: 2026-04-27 (session 4) | **H3_alt SUPPORTED** — e005b + e006b both VALIDATED (2/3); e007b INCONCLUSIVE (direction reversed); F1.2 awaits e008; F2.3 exploratory only*

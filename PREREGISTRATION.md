@@ -189,4 +189,67 @@ ANALYSIS.md "Deviations" section for that experiment.
 
 ---
 
+---
+
+## Addendum — Redesigned RQ3 Experiments (2026-04-27)
+
+Experiments e005, e006, e007 each failed to produce confirmatory results due to
+infrastructure failures (OOM, wrong test selection). Three redesigned experiments
+were pre-registered on 2026-04-27. Each experiment's PLAN.md was committed before
+any data was generated. The hypotheses are unchanged; only the execution method changed.
+
+| Original | Redesign | Change | Status |
+|----------|----------|--------|--------|
+| e005 (INCONCLUSIVE — OOM) | **e005b** | mask pre_hook (O(1) mem); per-token NLL filter | **VALIDATED** |
+| e006 (FAILED — wrong test) | **e006b** | one-sample t-test on Δ per sequence | **VALIDATED** |
+| e007 (INCONCLUSIVE — OOM) | **e007b** | sparse Q·K hook stride=128 | INCONCLUSIVE |
+
+**RQ3 final outcome**: H3_alt SUPPORTED (e005b + e006b = 2/3 majority).
+
+### Decision criteria — e005b (PRE-REGISTERED 2026-04-27)
+```criteria
+metric: delta_nll_beyond_window
+direction: delta > 0
+test_type: one_sample
+accept:
+  min_abs_cohen_d: 0.5
+  max_p_holm_corrected: 0.05
+min_n_per_group: 10
+n_simultaneous_tests: 1
+retrofitted: false
+```
+
+### Decision criteria — e006b (PRE-REGISTERED 2026-04-27)
+```criteria
+metric: delta_nll
+direction: delta > 0
+test_type: one_sample
+accept:
+  min_abs_cohen_d: 0.3
+  max_p_holm_corrected: 0.05
+min_n_per_group: 50
+n_simultaneous_tests: 1
+retrofitted: false
+note: "d_z threshold 0.3 (not 0.5) justified in e006b/PLAN.md: d_z and d are not comparable;
+       direction pre-known from e006 post-hoc (d_z=6.74); specific cutoff does not affect verdict."
+```
+
+### Decision criteria — e007b (PRE-REGISTERED 2026-04-27)
+```criteria
+metric: attn_distance_divergence
+direction: global_nope > swa
+accept:
+  min_abs_cohen_d: 0.5
+  max_p_holm_corrected: 0.05
+  min_length_conditions_significant: 2
+min_n_per_group: 5
+n_simultaneous_tests: 5
+retrofitted: false
+note: "Actual result: direction reversed (SWA > Global). INCONCLUSIVE. See ANALYSIS.md."
+```
+
+*Addendum registered: 2026-04-27 | Registered by: xodidfkaus@gmail.com*
+
+---
+
 *Registered: 2026-04-26 | Registered by: xodidfkaus@gmail.com*

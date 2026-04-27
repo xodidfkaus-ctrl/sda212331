@@ -1,0 +1,10 @@
+{
+  "n_sequences": 20,
+  "n_beyond_sequences": 20,
+  "mean_delta_beyond": 0.01722214025212452,
+  "std_delta_beyond": 0.016470510915147504,
+  "mean_delta_within": 0.0,
+  "corpus_mix": [
+    "en_edgar"
+  ]
+}

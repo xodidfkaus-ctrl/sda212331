@@ -113,6 +113,37 @@ Full analysis: `experiments/e007_long_context_hooks/ANALYSIS.md`.
 
 ---
 
+### [e007b] Long context sparse hook — INCONCLUSIVE (direction reversed)
+
+**Original prediction**: Global attention distance > SWA distance at ≥ 2 length conditions
+above 4,096 tokens (H3d_alt); d ≥ 0.5, p_Holm ≤ 0.05.
+
+**Result**: Direction reversed at all tested lengths. Global distance < SWA distance,
+with the gap growing with sequence length (−0.7 tokens at 2,048t → −26.2 tokens at 8,192t).
+At 8,192 tokens: t=−3.64, p_holm=0.002 in the wrong direction. Overall verdict: INCONCLUSIVE.
+
+**Why not FAILED**: A significant difference exists but in the opposite direction from H3d_alt.
+INCONCLUSIVE is correct — the null (no difference) is also not confirmed.
+
+**Known methodological limitation**: auto_validate received per-layer distances (n=160 for
+Global, n=480 for SWA at each length), not per-sample means (n=10). t-statistics are inflated
+~4–7×. The directional finding (SWA > Global) is robust (9/10 samples agree at 8,192t), but
+exact p-values are unreliable. Fix committed in 7c54bfe (sample-level aggregation); stats.json
+was NOT regenerated — requires a rerun to produce corrected statistics.
+
+**Mechanistic interpretation**: SWA window-forcing effect. At long sequences, SWA is
+constrained to attend within its 4,096-token window, enforcing a near-constant mean distance
+≈ 2,048 tokens per query position. Global (NoPE), without this constraint, distributes
+attention more flexibly and may concentrate on nearby tokens or attention sinks, giving lower
+mean distance. This is exploratory and not pre-registered in this direction.
+
+**Implication for RQ3**: e007b condition (H3d) contributes 0 to the H3_alt tally.
+H3_alt is supported via e005b + e006b (2/3 majority), independent of e007b.
+
+**Source**: `outputs/e007b_long_context_sparse_hook/stats.json` — `overall_verdict: "INCONCLUSIVE"`.
+
+---
+
 ## 2. Aborted Experiments
 
 ### [pre-e005] Initial Exp 3b run — OOM at seq_len = 6144 on A100 MIG 3g.40gb (40GB)
