@@ -202,7 +202,7 @@ any data was generated. The hypotheses are unchanged; only the execution method 
 |----------|----------|--------|--------|
 | e005 (INCONCLUSIVE — OOM) | **e005b** | mask pre_hook (O(1) mem); per-token NLL filter | **VALIDATED** |
 | e006 (FAILED — wrong test) | **e006b** | one-sample t-test on Δ per sequence | **VALIDATED** |
-| e007 (INCONCLUSIVE — OOM) | **e007b** | sparse Q·K hook stride=128 | INCONCLUSIVE |
+| e007 (INCONCLUSIVE — OOM) | **e007b** | sparse Q·K hook stride=128 | FAILED |
 
 **RQ3 final outcome**: H3_alt SUPPORTED (e005b + e006b = 2/3 majority).
 
@@ -245,7 +245,7 @@ accept:
 min_n_per_group: 5
 n_simultaneous_tests: 5
 retrofitted: false
-note: "Actual result: direction reversed (SWA > Global). INCONCLUSIVE. See ANALYSIS.md."
+note: "Actual result: direction reversed (SWA > Global). FAILED. auto_validate direction fix applied 2026-04-27. See ANALYSIS.md."
 ```
 
 *Addendum registered: 2026-04-27 | Registered by: xodidfkaus@gmail.com*

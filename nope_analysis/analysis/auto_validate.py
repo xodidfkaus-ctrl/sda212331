@@ -261,6 +261,24 @@ def _verdict(
 
     abs_d = abs(cohens_d) if not np.isnan(cohens_d) else 0.0
 
+    # Direction check: criteria direction field encodes expected sign of cohens_d.
+    # "a > b", "delta > 0", "h_out > h_in" → expect cohens_d > 0
+    # "a < b", "delta < 0"                 → expect cohens_d < 0
+    # Missing or unrecognised direction     → skip check (legacy behaviour)
+    direction = criteria.get("direction", "")
+    wrong_direction = False
+    if direction:
+        expects_positive = ">" in direction
+        expects_negative = "<" in direction and ">" not in direction
+        if expects_positive and cohens_d < 0:
+            wrong_direction = True
+        elif expects_negative and cohens_d > 0:
+            wrong_direction = True
+
+    # Wrong direction is always FAILED regardless of magnitude
+    if wrong_direction:
+        return "FAILED"
+
     if p_holm <= max_p and abs_d >= min_d:
         return "VALIDATED"
     elif p_holm > 0.05 or abs_d < 0.2:

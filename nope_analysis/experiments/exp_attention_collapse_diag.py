@@ -29,18 +29,28 @@ TEST_LENGTHS = [2048, 4096, 8192]
 N_SAMPLES = 3          # small — diagnostic only
 STRIDE = 128           # sample every STRIDE query positions
 LOCAL_WINDOW = 64      # "local" = within 64 tokens
+HEAD_DIM = 128         # EXAONE 4.5 head_dim
+
+
+def _reshape_proj(t):
+    """Reshape q/k_proj output from (batch, seq, n_heads*head_dim) → (batch, n_heads, seq, head_dim)."""
+    t = t.detach().float()
+    if t.dim() == 3:
+        b, s, d = t.shape
+        n_heads = d // HEAD_DIM
+        t = t.view(b, s, n_heads, HEAD_DIM).permute(0, 2, 1, 3).contiguous()
+    return t
 
 
 def make_sparse_q_hook(layer_idx, q_store):
     def hook(module, input, output):
-        # output shape: (batch, n_heads, seq, head_dim)
-        q_store[layer_idx] = output.detach().float()
+        q_store[layer_idx] = _reshape_proj(output)
     return hook
 
 
 def make_sparse_k_hook(layer_idx, k_store):
     def hook(module, input, output):
-        k_store[layer_idx] = output.detach().float()
+        k_store[layer_idx] = _reshape_proj(output)
     return hook
 
 

@@ -113,23 +113,34 @@ Full analysis: `experiments/e007_long_context_hooks/ANALYSIS.md`.
 
 ---
 
-### [e007b] Long context sparse hook — INCONCLUSIVE (direction reversed)
+### [e007b] Long context sparse hook — FAILED (direction reversed)
 
 **Original prediction**: Global attention distance > SWA distance at ≥ 2 length conditions
 above 4,096 tokens (H3d_alt); d ≥ 0.5, p_Holm ≤ 0.05.
 
-**Result**: Direction reversed at all tested lengths. Global distance < SWA distance,
-with the gap growing with sequence length (−0.7 tokens at 2,048t → −26.2 tokens at 8,192t).
-At 8,192 tokens: t=−3.64, p_holm=0.002 in the wrong direction. Overall verdict: INCONCLUSIVE.
+**Result**: Direction reversed at all tested lengths (corrected n=10 per group). Global distance
+< SWA distance, with the gap growing with sequence length:
 
-**Why not FAILED**: A significant difference exists but in the opposite direction from H3d_alt.
-INCONCLUSIVE is correct — the null (no difference) is also not confirmed.
+| Length | diff (Global−SWA) | Cohen's d | p_holm |
+|--------|-------------------|-----------|--------|
+| 2048t  | −0.7              | −0.087    | 0.849  |
+| 4096t  | −8.9              | −0.758    | 0.239  |
+| 5120t  | −11.5             | −0.835    | 0.239  |
+| 6144t  | −15.8             | −1.071    | 0.117  |
+| 8192t  | −26.2             | −1.481    | 0.023  |
 
-**Known methodological limitation**: auto_validate received per-layer distances (n=160 for
-Global, n=480 for SWA at each length), not per-sample means (n=10). t-statistics are inflated
-~4–7×. The directional finding (SWA > Global) is robust (9/10 samples agree at 8,192t), but
-exact p-values are unreliable. Fix committed in 7c54bfe (sample-level aggregation); stats.json
-was NOT regenerated — requires a rerun to produce corrected statistics.
+Overall verdict: FAILED (direction check implemented in auto_validate, 2026-04-27).
+
+**Why FAILED (not INCONCLUSIVE)**: The pre-registered direction (global > swa) was consistently
+opposite to observed direction across all five length conditions with growing effect size.
+Earlier classification as INCONCLUSIVE was based on a bug in `auto_validate._verdict()` that
+ignored the sign of Cohen's d (used `abs_d` instead of checking direction). The bug was fixed
+on 2026-04-27; the corrected verdict is FAILED.
+
+**Corrected effect sizes**: Original run had pseudo-replication bug (n=160/480 per-layer values
+instead of n=10 per-sample means). Script was rerun with fix applied; corrected d=-1.481 at
+8192t (large effect) vs original inflated-but-small d=-0.471. The directional finding is
+unchanged; the magnitude is now correctly estimated.
 
 **Mechanistic interpretation**: SWA window-forcing effect. At long sequences, SWA is
 constrained to attend within its 4,096-token window, enforcing a near-constant mean distance
@@ -140,7 +151,7 @@ mean distance. This is exploratory and not pre-registered in this direction.
 **Implication for RQ3**: e007b condition (H3d) contributes 0 to the H3_alt tally.
 H3_alt is supported via e005b + e006b (2/3 majority), independent of e007b.
 
-**Source**: `outputs/e007b_long_context_sparse_hook/stats.json` — `overall_verdict: "INCONCLUSIVE"`.
+**Source**: `outputs/e007b_long_context_sparse_hook/stats.json` — `overall_verdict: "FAILED"`.
 
 ---
 

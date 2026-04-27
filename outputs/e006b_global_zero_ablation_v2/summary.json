@@ -1,0 +1,12 @@
+{
+  "n_total": 50,
+  "n_within": 30,
+  "n_beyond": 20,
+  "mean_delta_within": 0.13626130819320678,
+  "mean_delta_beyond": 0.21749399304389955,
+  "mean_delta_all": 0.1687543821334839,
+  "std_delta_all": 0.05436972011213912,
+  "corpus_mix": [
+    "en_edgar"
+  ]
+}

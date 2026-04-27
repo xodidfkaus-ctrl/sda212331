@@ -1,0 +1,51 @@
+{
+  "experiment_id": "e006b",
+  "plan_path": "/home/elicer/sda212331/experiments/e006b_global_zero_ablation_v2/PLAN.md",
+  "retrofitted": false,
+  "overall_verdict": "VALIDATED",
+  "n_comparisons": 1,
+  "criteria": {
+    "metric": "delta_nll",
+    "direction": "delta > 0",
+    "test_type": "one_sample",
+    "accept": {
+      "min_abs_cohen_d": 0.3,
+      "max_p_holm_corrected": 0.05
+    },
+    "min_n_per_group": 50,
+    "n_simultaneous_tests": 1,
+    "bootstrap_n": 2000,
+    "retrofitted": false
+  },
+  "comparisons": [
+    {
+      "metric": "delta_nll",
+      "label_a": "delta_nll",
+      "label_b": "null_mu=0.0",
+      "n_a": 50,
+      "n_b": 0,
+      "mean_a": 0.1687543821334839,
+      "mean_b": 0.0,
+      "std_a": 0.05436972011213912,
+      "std_b": 0.0,
+      "diff_a_minus_b": 0.1687543821334839,
+      "t_stat": 21.947394195779612,
+      "p_value": 5.3215800760920236e-27,
+      "cohens_d": 3.1038302530420077,
+      "ci_a_95": [
+        0.15428647017478944,
+        0.1841035173535347
+      ],
+      "ci_b_95": [
+        0.0,
+        0.0
+      ],
+      "significant": true,
+      "effect_size_label": "large",
+      "test_type": "one_sample_t",
+      "p_holm": 5.3215800760920236e-27,
+      "n_tests_total": 1,
+      "verdict": "VALIDATED"
+    }
+  ]
+}

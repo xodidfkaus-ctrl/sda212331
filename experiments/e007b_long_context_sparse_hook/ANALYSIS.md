@@ -6,23 +6,25 @@
 **RQ**: RQ3 — Does Global attention distance diverge from SWA at lengths > SWA window?
 **Date run**: 2026-04-27
 **GPU**: 2× NVIDIA A100 80GB PCIe
-**auto_validate verdict**: **INCONCLUSIVE**
+**auto_validate verdict**: **FAILED**
 
 ---
 
 ## Primary Result
 
 ```
-[dist@2048t] global=476.6±44.0  swa=477.4±11.4  diff=-0.7   d=-0.030  p=0.835  ✗ (negligible, ns)
-[dist@4096t] global=982.5±65.7  swa=991.4±23.7  diff=-8.9   d=-0.230  p=0.095  ✗ (small, ns)
-[dist@5120t] global=1238.4±71.9 swa=1249.9±26.8 diff=-11.5  d=-0.269  p=0.050  ✗ (small, p_holm=0.149)
-[dist@6144t] global=1493.2±77.0 swa=1509.0±31.0 diff=-15.8  d=-0.337  p=0.012  ✓ (small, p_holm=0.050)
-[dist@8192t] global=1998.2±88.3 swa=2024.4±39.2 diff=-26.2  d=-0.471  p=0.0004 ✓ (small, p_holm=0.002)
+[dist@2048t] global=476.6±11.0  swa=477.4±4.7   diff=-0.7   d=-0.087  p=0.849              ✗ (negligible, ns)
+[dist@4096t] global=982.5±12.2  swa=991.4±11.3  diff=-8.9   d=-0.758  p=0.108  p_holm=0.239 ✗ (medium, wrong dir)
+[dist@5120t] global=1238.4±15.8 swa=1249.9±11.4 diff=-11.5  d=-0.835  p=0.080  p_holm=0.239 ✗ (large, wrong dir)
+[dist@6144t] global=1493.2±17.1 swa=1509.0±11.9 diff=-15.8  d=-1.071  p=0.029  p_holm=0.117 ✗ (large, wrong dir)
+[dist@8192t] global=1998.2±20.9 swa=2024.4±13.8 diff=-26.2  d=-1.481  p=0.005  p_holm=0.023 ✗ (large, wrong dir)
 
-Overall: INCONCLUSIVE — direction is reversed from hypothesis; effect size < 0.5
+Overall: FAILED — direction reversed at all lengths; auto_validate direction check returns FAILED
 ```
 
-`outputs/e007b_long_context_sparse_hook/stats.json` — `overall_verdict: "INCONCLUSIVE"`
+`outputs/e007b_long_context_sparse_hook/stats.json` — `overall_verdict: "FAILED"`
+
+**Note on corrected effect sizes**: The original ANALYSIS (before correction) reported inflated effect sizes (d up to −0.471) due to pseudo-replication (n=160/480 instead of n=10/10). Rerunning the experiment script with the pseudo-replication bug fixed produced the correct n=10 per group. Cohen's d values are larger in absolute magnitude (−0.758 to −1.481) because the pooled SD is smaller when computed from 10 sample means rather than 160 per-layer observations.
 
 ---
 
@@ -117,11 +119,15 @@ This is a known limitation.
 
 ## Verdict Justification
 
-**INCONCLUSIVE** (not FAILED) because:
-- The pre-registered direction (global > swa) was not observed, but H3d_null (no difference)
-  is also not confirmed: there IS a significant difference, just in the opposite direction.
-- An INCONCLUSIVE verdict correctly reflects that this result neither supports nor refutes
-  H3d_alt in the expected way.
+**FAILED** (updated from earlier INCONCLUSIVE classification) because:
+- The pre-registered direction was `global_nope > swa`. All five length conditions observed
+  `global_nope < swa` (negative d throughout).
+- A bug in `auto_validate._verdict()` originally ignored direction when evaluating Cohen's d:
+  it used `abs_d ≥ 0.5` without checking sign. The bug was fixed (2026-04-27); with the fix,
+  any result where the observed direction contradicts the pre-registered direction returns FAILED.
+- FAILED is the correct pre-registration verdict: the pre-registered hypothesis was not observed.
+  INCONCLUSIVE is reserved for underpowered experiments where direction could not be estimated,
+  not for experiments where direction was clearly observed but opposed to the hypothesis.
 - The statistically significant reversed gap (SWA > Global at long sequences) is itself a
   finding, but a different hypothesis than what was pre-registered — and requires replication
   with correct n and consistent corpus/method before being reported as a positive result.
@@ -140,11 +146,10 @@ failure to confirm the predicted direction does not invalidate e006b's causal ev
 |---|-----------|-----------|---------|
 | 1 | SWA mask → PPL↑ at pos > 4,096 | e005b | PENDING |
 | 2 | Zero Global output → PPL↑ | e006b | ✅ VALIDATED |
-| 3 | Global distance > SWA at ≥2 lengths >4,096 | **e007b** | **INCONCLUSIVE** |
+| 3 | Global distance > SWA at ≥2 lengths >4,096 | **e007b** | **FAILED** |
 
-**RQ3 tally: 1 VALIDATED / 1 INCONCLUSIVE / 1 PENDING.**
-H3_alt requires ≥ 2 of 3 VALIDATED. e005b is the deciding experiment.
-If e005b VALIDATES → H3_alt supported (2/3). If e005b INCONCLUSIVE/FAILED → H3_alt unsupported (1/3).
+**RQ3 tally: 2 VALIDATED / 1 FAILED.**
+H3_alt requires ≥ 2 of 3 VALIDATED → **H3_alt SUPPORTED** (e005b + e006b = 2/3).
 
 ---
 
