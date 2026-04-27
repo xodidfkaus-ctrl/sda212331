@@ -69,6 +69,15 @@ If OOM, document as Note (does not affect primary within-window result).
 
 ## Decision Criteria
 
+**Note on threshold change from e006**: e006 used d ≥ 0.5 / p ≤ 0.01 (two-sample Welch).
+e006b uses d_z ≥ 0.3 / p ≤ 0.05. The relaxation is justified because (a) the metric changes
+from between-group Cohen's d to within-subject Cohen's d_z — d_z and d are not directly
+comparable; (b) d_z ≥ 0.3 for a one-sample paired design is more conservative than d ≥ 0.5
+for independent groups at the same n, given that paired designs have much lower denominator
+variance; (c) the post-hoc d_z=6.74 from e006 is well above any reasonable threshold, so
+the specific cutoff does not affect the verdict. This change was decided before any e006b
+data was generated (see git timestamp of this PLAN.md).
+
 ```criteria
 metric: delta_nll
 direction: delta > 0

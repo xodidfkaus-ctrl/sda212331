@@ -87,6 +87,32 @@ Post-hoc paired analysis (exploratory): t=30.15, p=1.65e-17, d_z=6.74 — strong
 
 ---
 
+### [e007] Long context hook analysis — INCONCLUSIVE (OOM after 1 sample)
+
+**Original prediction**: Global attention distance diverges from SWA at ≥ 2 length
+conditions above 4,096 tokens (H3d_alt); d ≥ 0.5, p_Holm ≤ 0.01 at ≥ 2 lengths.
+
+**Result**: OOM at the second sample of 2,048 tokens. Only 1 sample completed at 2,048 tokens;
+all lengths ≥ 3,072 failed on sample 0. `output_attentions=True` caused CUDA memory
+fragmentation — after the first forward pass, freed blocks remained fragmented and subsequent
+contiguous allocation for full attention matrices failed.
+
+Single data point (n=1, 2,048 tokens): Global dist=549.5 ± 122.0 vs SWA dist=441.6 ± 112.2,
+gap=+107.9. Note: variance is cross-layer (pseudo-replication), not cross-sample.
+auto_validate verdict: INCONCLUSIVE (force_verdict flag; n=1 < min_n=5).
+
+**Why not rejected as FAILED**: Zero beyond-window data collected. The experiment could not
+test the primary question (divergence at seq ≥ 4,096). This is a data collection failure, not
+a negative result.
+
+**Implication**: Direction is consistent with e002 observation (same direction, similar magnitude,
+different corpus). Motivates e007b (sparse Q·K hook, stride=128, pre-registered 2026-04-27).
+
+**Source**: `outputs/exp4_long_context/stats.json` — `overall_verdict: "INCONCLUSIVE"`.
+Full analysis: `experiments/e007_long_context_hooks/ANALYSIS.md`.
+
+---
+
 ## 2. Aborted Experiments
 
 ### [pre-e005] Initial Exp 3b run — OOM at seq_len = 6144 on A100 MIG 3g.40gb (40GB)

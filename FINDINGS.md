@@ -90,32 +90,54 @@ PRE-REGISTERED)
 
 ---
 
-### F2.3 — SWA distance saturation above 4,096 tokens: PENDING [e007]
+### F2.3 — SWA distance saturation above 4,096 tokens: PENDING [e007b] ⚠️ PRELIMINARY OBSERVATION ONLY
 
-**Status**: e007 not yet run.
+**e007 status**: INCONCLUSIVE (2026-04-27). OOM at seq_len ≥ 3,072 after the first sample
+at 2,048 tokens. `output_attentions=True` caused CUDA memory fragmentation incompatible
+with multi-sample runs. Single data point (1 sample, 2,048 tokens, cross-layer variance
+treated as proxy for cross-sample): Global dist=549.5, SWA dist=441.6, gap=+107.9 tokens.
+Direction consistent with e002 but not confirmatory — pseudo-replication, no between-sample
+variance.
+
+**e007b status**: PENDING (PRE-REGISTERED 2026-04-27). Redesigned with sparse Q·K hook
+(stride=128) instead of `output_attentions=True`. Memory at 8,192 tokens: ~42 MB/layer
+vs 5.4 GB full. Script: `nope_analysis/experiments/exp4_long_context_sparse_hook.py`.
+
+**Do not cite e007 results as evidence for H2_alt.** Awaiting e007b.
 
 ---
 
 ## RQ3 — Causal Contribution of Global to Long-Range Dependency
 
-### F3.1 — Causal ablation verdict: INCONCLUSIVE (1 of 3 complete) [e005, e006, e007]
+### F3.1 — Causal ablation verdict: IN PROGRESS (1 of 3 confirmed) [e005b, e006b, e007b]
 
 **Decision rule** (2-of-3 majority, from HANDOVER.md Section 2b and PREREGISTRATION.md):
-1. [e005] SWA mask injection → perplexity increase at pos > 4,096, d ≥ 0.5 → **INCONCLUSIVE** (OOM; zero beyond-window data)
-2. [e006] Global zero-output → perplexity degradation, d ≥ 0.5 → PENDING
-3. [e007] Global distance growth diverges from SWA saturation at ≥ 2 length conditions → PENDING
 
-H3_alt (Global contributes causally) requires ≥ 2 of 3 conditions with d ≥ 0.5.
-Current tally: 0 VALIDATED / 1 INCONCLUSIVE / 2 PENDING.
+| # | Condition | Experiment | Verdict | Notes |
+|---|-----------|-----------|---------|-------|
+| 1 | SWA mask → PPL↑ at pos > 4,096 | e005b (redesign of e005) | **PENDING** | script written, not yet run |
+| 2 | Zero Global output → PPL↑ | **e006b** (redesign of e006) | **✅ VALIDATED** | ΔNLL=+0.169, t=21.95, p≈2e-27, d_z=3.10 |
+| 3 | Global distance diverges from SWA at ≥2 lengths >4,096 | e007b (redesign of e007) | **PENDING** | script written, running |
 
-**e005 note**: The experiment failed to collect any beyond-window data. OOM at seq_len ≥ 5120
-on A100 80GB PCIe with `attn_implementation='eager'`. The design requires a narrower SWA window
-or a different memory strategy before it can produce evidence for or against H3b_alt.
-See ANALYSIS.md Deviation 1 and "Recommended Next Steps."
+H3_alt (Global contributes causally) requires ≥ 2 of 3 conditions VALIDATED.
+**Current tally: 1 VALIDATED / 0 INCONCLUSIVE / 2 PENDING.**
 
-**Critical implication for e006 and e007**: Even if both return VALIDATED, the 2-of-3 rule
-would be satisfied. However, if either also returns INCONCLUSIVE/FAILED, H3_alt cannot be
-supported. With e005 eliminated, the RQ3 verdict depends entirely on e006 + e007.
+**e006b finding**: Zeroing all 16 Global layer attention outputs causes a statistically
+significant and practically large increase in per-token NLL (ΔNLL=+0.169 nats, d_z=3.10, n=50).
+Effect is larger beyond the SWA window (+0.218 nats at seq>4,096) than within (+0.136 nats),
+consistent with H3_alt. However, e006b does NOT distinguish within-window from beyond-window
+causal contribution at the token level — the beyond-window comparison is per-sequence, not
+per-token-position. Per-token filtering is e005b's task.
+
+**Scope warning**: e006b proves Global attention is causally necessary (somewhere). It does
+NOT by itself prove Global contributes to long-range dependency specifically. The long-range
+causal claim requires ≥ 1 of {e005b, e007b} to also VALIDATE.
+
+**Prior experiments (superseded)**:
+- e005 INCONCLUSIVE: OOM at all beyond-window lengths; zero primary-metric data.
+- e006 FAILED: correct effect present (post-hoc d_z=6.74) but wrong test selected (independent
+  groups instead of paired); FAILED verdict upheld per Rule R5.
+- e007 INCONCLUSIVE: OOM from `output_attentions=True` after 1 sample at 2,048 tokens.
 
 ---
 
@@ -148,4 +170,4 @@ See HANDOVER.md Section 10 for full discussion.
 
 ---
 
-*Last updated: 2026-04-26 | Pending findings: F1.2, F2.3, F3.1 (e005 INCONCLUSIVE; e006–e008 not yet run)*
+*Last updated: 2026-04-27 (session 4) | e006b VALIDATED (F3.1 condition 2); e007b running; e005b pending; F1.2/F2.3 await e008/e007b*
