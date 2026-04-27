@@ -231,13 +231,21 @@ def run():
     plot_results(all_results)
     save_summary(all_results)
 
-    # auto_validate — one comparison per length condition
+    # auto_validate — aggregate to sample-level means before comparing
+    # (avoid pseudo-replication: multiple layers from the same sample are not independent)
     comparisons = {}
     for tlen in TARGET_LENGTHS:
-        g_vals = [r['attn_distance'] for r in all_results
-                  if r['seq_len'] == tlen and r['layer_type'] == 'global_nope']
-        s_vals = [r['attn_distance'] for r in all_results
-                  if r['seq_len'] == tlen and r['layer_type'] == 'swa']
+        sample_ids = sorted(set(r['sample_idx'] for r in all_results if r['seq_len'] == tlen))
+        g_vals, s_vals = [], []
+        for sid in sample_ids:
+            g_mean = np.mean([r['attn_distance'] for r in all_results
+                              if r['seq_len'] == tlen and r['sample_idx'] == sid
+                              and r['layer_type'] == 'global_nope'])
+            s_mean = np.mean([r['attn_distance'] for r in all_results
+                              if r['seq_len'] == tlen and r['sample_idx'] == sid
+                              and r['layer_type'] == 'swa'])
+            g_vals.append(g_mean)
+            s_vals.append(s_mean)
         if len(g_vals) >= 2 and len(s_vals) >= 2:
             comparisons[f'dist@{tlen}t'] = (g_vals, s_vals)
 
@@ -248,6 +256,7 @@ def run():
             output_dir=OUT_DIR,
             label_a="global_nope",
             label_b="swa",
+            repo_root=Path('/home/elicer/sda212331'),
         )
     else:
         print("[auto_validate] Skipped — insufficient data")

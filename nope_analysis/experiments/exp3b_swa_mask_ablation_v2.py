@@ -90,15 +90,16 @@ def register_swa_mask_hooks(model, global_layers, seq_len):
 
     def make_pre_hook(layer_idx):
         def pre_hook(module, args, kwargs):
-            # Inject attention_mask into kwargs
-            # Try to replace attention_mask with our window mask
             if 'attention_mask' in kwargs:
                 old_mask = kwargs['attention_mask']
                 if old_mask is not None:
-                    # Add our window constraint on top of existing mask
-                    kwargs['attention_mask'] = old_mask + window_mask.unsqueeze(0).unsqueeze(0)
+                    # Move window_mask to the same device as the layer's attention_mask
+                    wm = window_mask.unsqueeze(0).unsqueeze(0).to(old_mask.device)
+                    kwargs['attention_mask'] = old_mask + wm
                 else:
-                    kwargs['attention_mask'] = window_mask.unsqueeze(0).unsqueeze(0)
+                    kwargs['attention_mask'] = window_mask.unsqueeze(0).unsqueeze(0).to(
+                        next(module.parameters()).device
+                    )
             return args, kwargs
         return pre_hook
 
@@ -241,6 +242,7 @@ def run():
         output_dir=OUT_DIR,
         label_a="delta_nll_beyond",
         label_b="null_mu=0",
+        repo_root=Path('/home/elicer/sda212331'),
     )
 
     print(f"\nOutputs: {OUT_DIR}")
