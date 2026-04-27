@@ -180,6 +180,7 @@ def run():
             output_dir=OUT_DIR,
             label_a="delta_nll",
             label_b="null_mu=0",
+            repo_root=Path('/home/elicer/sda212331'),
         )
     else:
         print(f"[auto_validate] Skipped — n={len(all_deltas)} < 10 (insufficient data)")
