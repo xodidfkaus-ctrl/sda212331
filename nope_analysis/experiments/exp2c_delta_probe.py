@@ -95,61 +95,45 @@ def eval_probe(probe, X_test, y_test, device):
 def extract_hidden_states(model, tokenizer, texts, seq_len, global_set, n_layers, device):
     """
     Returns:
-        h_in:  dict[layer_idx] -> (n_tokens_total, hidden_size)  — residual BEFORE attention
-        h_out: dict[layer_idx] -> (n_tokens_total, hidden_size)  — residual AFTER attention + residual add
+        h_in:  dict[layer_idx] -> (n_tokens_total, hidden_size)  — residual BEFORE layer i
+        h_out: dict[layer_idx] -> (n_tokens_total, hidden_size)  — residual AFTER layer i
         labels: (n_tokens_total,)  — position bin for each token
-    """
-    lm_layers = model.model.language_model.layers
 
+    Uses output_hidden_states=True to avoid forward-hook / Accelerate dispatch conflicts
+    on multi-GPU setups. hidden_states[i] = output of layer i-1 = input to layer i.
+    """
     h_in_store = {i: [] for i in range(n_layers)}
     h_out_store = {i: [] for i in range(n_layers)}
-
-    def make_pre_hook(li):
-        def hook(module, args):
-            if args:
-                h_in_store[li].append(args[0].detach().cpu().float())
-        return hook
-
-    def make_post_hook(li):
-        def hook(module, input, output):
-            # Decoder layer output: first element is hidden state
-            out = output[0] if isinstance(output, tuple) else output
-            h_out_store[li].append(out.detach().cpu().float())
-        return hook
-
-    handles = []
-    for li in range(n_layers):
-        handles.append(lm_layers[li].register_forward_pre_hook(make_pre_hook(li)))
-        handles.append(lm_layers[li].register_forward_hook(make_post_hook(li)))
-
     all_labels = []
 
-    try:
-        for text in texts:
-            ids = tokenizer(text, return_tensors='pt', truncation=True,
-                           max_length=seq_len)['input_ids'].to(device)
-            actual_len = ids.shape[1]
-            pos_bins = assign_position_bins(actual_len).numpy()
-            all_labels.append(pos_bins)
+    for text in texts:
+        ids = tokenizer(text, return_tensors='pt', truncation=True,
+                       max_length=seq_len)['input_ids'].to('cuda:0')
+        actual_len = ids.shape[1]
+        pos_bins = assign_position_bins(actual_len).numpy()
+        all_labels.append(pos_bins)
 
-            with torch.no_grad():
-                model(ids)
+        with torch.no_grad():
+            outputs = model(ids, output_hidden_states=True)
 
-            torch.cuda.empty_cache()
-    finally:
-        for h in handles:
-            h.remove()
+        # hidden_states is a tuple of n_layers+1 tensors:
+        #   [0] = embedding output (before layer 0)
+        #   [i+1] = output of layer i  →  h_out[i]
+        # So h_in[i] = hidden_states[i], h_out[i] = hidden_states[i+1]
+        hs = outputs.hidden_states
+        for li in range(n_layers):
+            h_in_store[li].append(hs[li].squeeze(0).cpu().float())
+            h_out_store[li].append(hs[li + 1].squeeze(0).cpu().float())
 
-    labels = np.concatenate(all_labels)  # (n_tokens_total,)
+        del outputs, hs
+        torch.cuda.empty_cache()
 
-    h_in_flat = {}
-    h_out_flat = {}
-    for li in range(n_layers):
-        if h_in_store[li]:
-            # Each entry: (1, seq_len, hidden) → flatten to (seq_len, hidden)
-            h_in_flat[li] = torch.cat([x.squeeze(0) for x in h_in_store[li]], dim=0).numpy()
-        if h_out_store[li]:
-            h_out_flat[li] = torch.cat([x.squeeze(0) for x in h_out_store[li]], dim=0).numpy()
+    labels = np.concatenate(all_labels)
+
+    h_in_flat = {li: torch.cat(h_in_store[li], dim=0).numpy()
+                 for li in range(n_layers) if h_in_store[li]}
+    h_out_flat = {li: torch.cat(h_out_store[li], dim=0).numpy()
+                  for li in range(n_layers) if h_out_store[li]}
 
     return h_in_flat, h_out_flat, labels
 
@@ -228,7 +212,7 @@ def run():
             print(f"  Extracting batch {batch_start//batch_size + 1}/{(len(texts)-1)//batch_size + 1}...",
                   flush=True)
             h_in, h_out, labels = extract_hidden_states(
-                model, tokenizer, batch, seq_len, global_set, n_layers, model.device)
+                model, tokenizer, batch, seq_len, global_set, n_layers, None)
             for li in range(n_layers):
                 if li in h_in:
                     h_in_all[li].append(h_in[li])
