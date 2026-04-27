@@ -100,18 +100,34 @@ python3 -c "from nope_analysis.corpus.downloader import download_all; download_a
 Expected output:
 ```
 Pre-downloading corpora...
-[corpus] WikiText-103 loaded: 699,876 passages
-[corpus] Cached en corpus to .../corpus/cache/en.json
-  en: 699,876 passages cached
-[corpus] KLUE-MRC loaded: 17,554 passages
-[corpus] Cached ko corpus to .../corpus/cache/ko.json
-  ko: 17,554 passages cached
+[corpus] WikiText-103 loaded: 699,876 passages  →  en.json  (499MB)
+[corpus] EDGAR total: 59,218 sections           →  en_edgar.json  (2.4GB)
+[corpus] KLUE-MRC loaded: 17,554 passages       →  ko.json  (41MB)
 Done.
 ```
 
-**Runtime**: ~2–3 minutes (network download from HuggingFace).
-**Disk**: ~540MB total (en.json 499MB + ko.json 41MB).
-**Why not committed to git**: 540MB exceeds GitHub file size limits. The `datasets` library (added to `requirements.txt` 2026-04-27) handles download automatically.
+**Runtime**: ~5–10 minutes (EDGAR 2.4GB 다운로드 포함).
+**Disk**: ~3GB total. **Why not committed to git**: GitHub 파일 크기 제한 초과.
+
+**DART (한국어 금융공시) 추가 빌드** — 선택사항, API 키 필요:
+```bash
+export DART_API_KEY=your_key_here   # opendart.fss.or.kr 에서 발급
+python3 -c "
+from nope_analysis.corpus.downloader import download_all
+download_all(['ko_dart'], dart_api_key='your_key_here')
+"
+# ko_dart.json 생성. 사업보고서 최대 200건, 문건당 수천~수만 토큰.
+```
+
+**코퍼스 선택 가이드**:
+| lang | 용도 | 평균 길이 | 이어붙임 필요 |
+|------|------|-----------|--------------|
+| `en` | WikiText-103 (Wikipedia) | ~185 tokens | 4096 토큰에 22개 |
+| `en_edgar` | SEC 10-K 연간보고서 | ~10,600 tokens | **불필요** (단일 섹션으로 충분) |
+| `ko` | KLUE-MRC (뉴스/위키) | ~500 tokens | 4096 토큰에 8개 |
+| `ko_dart` | DART 사업보고서 | 수천~수만 tokens | **불필요** |
+
+**실험 스크립트에서 코퍼스 교체**: `lang='en'` → `lang='en_edgar'`로 바꾸면 됨. PLAN.md 코퍼스 명세가 `WikiText-103`으로 pre-register된 실험은 교체 시 PLAN.md deviation으로 기록 필요.
 
 ---
 
@@ -194,7 +210,7 @@ Push any results from the previous session that were not pushed.
 | VRAM >= 40GB | GPU output | memory >= 40GB |
 | Loader import | `from nope_analysis import loader` | No error |
 | Model cache | `ls model_cache/.../snapshots/` | Folder exists |
-| Corpus cache | `ls nope_analysis/corpus/cache/` | `en.json` and `ko.json` present |
+| Corpus cache | `ls nope_analysis/corpus/cache/` | `en.json`, `en_edgar.json`, `ko.json` present |
 
 ---
 
@@ -341,7 +357,7 @@ If there are unpushed results from the previous session, push them first.
 | GPU count | `python3 -c "import torch; print(torch.cuda.device_count())"` | `1` |
 | Model cache | `ls model_cache/models--LGAI-EXAONE--EXAONE-4.5-33B/snapshots/` | folder exists |
 | Dependencies | `python3 -c "from nope_analysis.loader import load_config; load_config()"` | no error |
-| Corpus cache | `ls nope_analysis/corpus/cache/` | `en.json` and `ko.json` present |
+| Corpus cache | `ls nope_analysis/corpus/cache/` | `en.json`, `en_edgar.json`, `ko.json` present |
 | Git auth | `git push --dry-run 2>&1` | no error |
 | Git sync | `git status` | no unpushed results |
 
