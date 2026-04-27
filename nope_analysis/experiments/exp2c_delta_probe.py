@@ -202,11 +202,13 @@ def run():
         for i in range(N_PROMPTS):
             lang = 'en_edgar' if i < N_PROMPTS // 2 else 'en'
             try:
-                t = get_text_sample(lang, seq_len, i)
+                t = get_text_sample(lang, min_tokens=seq_len + 64,
+                                    tokenizer=tokenizer, seed=SEED + i)
                 texts.append(t)
             except Exception:
                 try:
-                    t = get_text_sample('en', seq_len, i)
+                    t = get_text_sample('en', min_tokens=seq_len + 64,
+                                        tokenizer=tokenizer, seed=SEED + i)
                     texts.append(t)
                 except Exception as e:
                     print(f"  [corpus] skip prompt {i}: {e}")

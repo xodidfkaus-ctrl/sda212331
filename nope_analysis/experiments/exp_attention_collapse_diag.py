@@ -134,9 +134,11 @@ def run():
 
         for sidx in range(N_SAMPLES):
             try:
-                text = get_text_sample('en_edgar', tlen, sidx)
+                text = get_text_sample('en_edgar', min_tokens=tlen + 256,
+                                       tokenizer=tokenizer, seed=42 + sidx)
             except Exception:
-                text = get_text_sample('en', tlen, sidx)
+                text = get_text_sample('en', min_tokens=tlen + 256,
+                                       tokenizer=tokenizer, seed=42 + sidx)
 
             ids = tokenizer(text, return_tensors='pt', truncation=True,
                            max_length=tlen)['input_ids'].to(model.device)
