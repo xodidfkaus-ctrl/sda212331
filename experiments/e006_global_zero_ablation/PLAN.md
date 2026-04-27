@@ -67,3 +67,33 @@ Same as e005. Run e005 first to confirm full A100 80GB is available before runni
 - [ ] Full A100 80GB confirmed
 - [ ] PLAN.md committed
 - [ ] `auto_validate.py` called at exit
+
+---
+
+## Pre-run Amendment (2026-04-27, before any results)
+
+### Corpus change: WikiText-103/KLUE-MRC → EDGAR 10-K (en_edgar)
+
+**Original spec**: WikiText-103 / KLUE-MRC, ≥ 20 sequences per language.
+
+**Amended spec**: EDGAR 10-K annual report sections (`en_edgar`) as primary corpus,
+WikiText-103 (`en`) as fallback. Korean corpus excluded from this run.
+
+**Rationale**: The original corpus spec was aspirational and was never implemented in the
+script — `exp3_swa_ablation.py` used hardcoded synthetic `BASE_TEXT` (repeated text, PPL ~1.07)
+which is what caused e005's ΔNLL = 0.0. This amendment corrects the implementation to use
+real natural language text, which was always the scientific intent.
+
+`en_edgar` is preferred over `en` (WikiText-103) because EDGAR sections average ~10,600 tokens,
+meaning a single section fills a 4,096-token sequence without multi-passage concatenation.
+WikiText-103 passages average ~185 tokens and require ~22 passages concatenated per sequence,
+creating artificial domain boundaries that may suppress long-range signals.
+
+**Amendment impact**: This is a methodological improvement, not a post-hoc change.
+The pre-registered hypothesis (H3c_alt) and decision criteria are unchanged.
+Results must note "corpus: en_edgar" in ANALYSIS.md.
+
+### Sample count: 1 per length → 5 per length
+
+**Original spec**: 1 sample per length condition (implementation gap vs. PLAN.md's ≥ 20 total).
+**Amended spec**: N_SAMPLES = 5 per length condition = 20 within-window samples, meeting min_n_per_group=20.

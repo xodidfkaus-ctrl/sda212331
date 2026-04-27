@@ -76,3 +76,20 @@ note: |
 - [ ] Full A100 80GB confirmed
 - [ ] PLAN.md committed
 - [ ] `auto_validate.py` called at exit
+
+---
+
+## Pre-run Amendment (2026-04-27, before any results)
+
+### Corpus change: WikiText-103 → EDGAR 10-K (en_edgar)
+
+**Original spec**: WikiText-103 sequences truncated/padded to target lengths.
+
+**Amended spec**: EDGAR 10-K sections (`en_edgar`) as primary, WikiText-103 (`en`) as fallback.
+
+**Rationale**: Same as e006 amendment — `exp4_long_context.py` used hardcoded synthetic
+`BASE_TEXT`. EDGAR sections average ~10,600 tokens, enabling single-document sequences
+without multi-passage concatenation artifacts.
+
+**Hypothesis and decision criteria unchanged.** `force_verdict: INCONCLUSIVE` remains in effect.
+Results must note "corpus: en_edgar" in ANALYSIS.md. Results remain EXPLORATORY regardless.

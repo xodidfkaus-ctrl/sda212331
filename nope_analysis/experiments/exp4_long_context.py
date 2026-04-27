@@ -31,36 +31,46 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from nope_analysis.loader import load_model_and_tokenizer, load_config, get_global_layer_indices, get_swa_layer_indices
+from nope_analysis.seeds import set_all_seeds, EXPERIMENT_SEEDS
 
 OUT_DIR = Path('/home/elicer/sda212331/outputs/exp4_long_context')
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 TARGET_LENGTHS = [2048, 3072, 4096, 5120, 6144, 8192]
 SWA_WINDOW = 4096
-
-BASE_TEXT = (
-    "인공지능 기술의 발전은 현대 사회에 많은 변화를 가져오고 있다. "
-    "특히 자연어 처리 분야에서의 혁신은 인간과 기계 사이의 소통 방식을 근본적으로 바꾸고 있으며 "
-    "대규모 언어 모델의 등장으로 텍스트 생성 번역 요약 등 다양한 작업에서 인간 수준의 성능을 달성하고 있다. "
-    "The development of large language models has fundamentally changed how we approach natural language understanding. "
-    "These models learn from vast amounts of text data and can generate coherent contextually appropriate responses. "
-    "The hybrid attention mechanism combining sliding window attention and global attention is a key architectural innovation. "
-    "Sliding window attention limits each token to attending only within a local window reducing computational complexity. "
-    "Global attention layers by contrast allow every token to attend to every other token in the sequence. "
-    "NoPE No Positional Embedding is a technique used in global attention layers to remove explicit position encodings. "
-    "수학적으로 증명하면 임의의 연속 함수에 대해 적분이 존재함을 보일 수 있다. "
-    "언어 모델의 어텐션 메커니즘은 입력 시퀀스의 각 토큰 간 관계를 학습하는 핵심 구성 요소이다. "
-    "어텐션 엔트로피는 각 레이어가 입력 토큰들에 얼마나 고르게 주목하는지를 나타내는 지표이다. "
-)
+N_SAMPLES = 5       # per length condition (PLAN.md: ≥ 5 distinct texts)
+BASE_SEED = EXPERIMENT_SEEDS["e007"]  # 42
 
 
-def build_input(tokenizer, target_len: int):
-    repeated = BASE_TEXT * (target_len // 80 + 5)
-    tokens = tokenizer(repeated, return_tensors='pt', add_special_tokens=True)
-    ids = tokens['input_ids']
-    if ids.shape[1] < target_len:
-        raise ValueError(f"텍스트 부족: {ids.shape[1]} < {target_len}")
-    return ids[:, :target_len]
+def build_input_for_sample(tokenizer, target_len: int, sample_idx: int):
+    """
+    Build token tensor from real corpus. Priority: en_edgar → en → synthetic.
+    Different sample_idx yields different corpus sections.
+    """
+    from nope_analysis.corpus.downloader import get_text_sample
+    seed = BASE_SEED + sample_idx
+
+    for lang in ['en_edgar', 'en']:
+        try:
+            text = get_text_sample(lang, min_tokens=target_len + 256,
+                                   tokenizer=tokenizer, seed=seed)
+            ids = tokenizer(text, return_tensors='pt',
+                            add_special_tokens=True)['input_ids']
+            if ids.shape[1] >= target_len:
+                return ids[:, :target_len], lang
+        except Exception as e:
+            print(f"[corpus] {lang} seed={seed} failed: {e}")
+
+    print(f"[corpus] WARNING: synthetic fallback for sample_idx={sample_idx}")
+    _SYNTHETIC = (
+        "The development of large language models has fundamentally changed natural "
+        "language understanding. Sliding window attention limits context to a local "
+        "window. Global NoPE layers attend to the full sequence without positional encoding. "
+    )
+    repeated = _SYNTHETIC * (target_len // 40 + 10)
+    ids = tokenizer(repeated, return_tensors='pt',
+                    add_special_tokens=True)['input_ids']
+    return ids[:, :target_len], 'synthetic'
 
 
 def compute_entropy(attn: torch.Tensor) -> float:
@@ -118,13 +128,15 @@ def run_with_hooks(model, input_ids, global_set):
 
 
 def run():
+    set_all_seeds(BASE_SEED)
     cfg = load_config()
     global_layers = get_global_layer_indices(cfg)
     global_set = set(global_layers)
     swa_set = set(get_swa_layer_indices(cfg))
     print(f"Global layers: {global_layers}")
     print(f"SWA window: {SWA_WINDOW} tokens")
-    print(f"Target lengths: {TARGET_LENGTHS}\n")
+    print(f"Target lengths: {TARGET_LENGTHS}")
+    print(f"Samples per length: {N_SAMPLES}  (seed base: {BASE_SEED})\n")
 
     model, tokenizer = load_model_and_tokenizer()
 
@@ -132,33 +144,46 @@ def run():
 
     for target_len in TARGET_LENGTHS:
         print(f"\n{'='*50}")
-        print(f"Length = {target_len} tokens  {'[SWA 윈도우 초과]' if target_len > SWA_WINDOW else '[SWA 윈도우 내]'}")
+        print(f"Length = {target_len} tokens  "
+              f"{'[beyond SWA window]' if target_len > SWA_WINDOW else '[within SWA window]'}")
 
-        input_ids = build_input(tokenizer, target_len).to(model.device)
-        print(f"  Forward pass with hooks...")
+        for sample_idx in range(N_SAMPLES):
+            print(f"  Sample {sample_idx+1}/{N_SAMPLES}", end="  ")
+            input_ids, corpus_lang = build_input_for_sample(tokenizer, target_len, sample_idx)
+            input_ids = input_ids.to(model.device)
+            print(f"corpus={corpus_lang}  forward pass...")
 
-        layer_stats = run_with_hooks(model, input_ids, global_set)
+            try:
+                layer_stats = run_with_hooks(model, input_ids, global_set)
+            except RuntimeError as e:
+                if 'out of memory' in str(e).lower():
+                    print(f"  OOM at len={target_len} sample={sample_idx} — skipping remaining")
+                    torch.cuda.empty_cache()
+                    break
+                raise
 
-        for layer_idx, s in layer_stats.items():
-            layer_type = 'global_nope' if layer_idx in global_set else 'swa'
-            all_results.append({
-                'seq_len': target_len,
-                'layer_idx': layer_idx,
-                'layer_type': layer_type,
-                'entropy': s['entropy'],
-                'attn_distance': s['distance'],
-                'exceeds_swa_window': target_len > SWA_WINDOW,
-            })
+            for layer_idx, s in layer_stats.items():
+                layer_type = 'global_nope' if layer_idx in global_set else 'swa'
+                all_results.append({
+                    'seq_len': target_len,
+                    'sample_idx': sample_idx,
+                    'corpus': corpus_lang,
+                    'layer_idx': layer_idx,
+                    'layer_type': layer_type,
+                    'entropy': s['entropy'],
+                    'attn_distance': s['distance'],
+                    'exceeds_swa_window': target_len > SWA_WINDOW,
+                })
 
-        g_e = np.mean([s['entropy'] for i, s in layer_stats.items() if i in global_set])
-        s_e = np.mean([s['entropy'] for i, s in layer_stats.items() if i in swa_set])
-        g_d = np.mean([s['distance'] for i, s in layer_stats.items() if i in global_set])
-        s_d = np.mean([s['distance'] for i, s in layer_stats.items() if i in swa_set])
-        print(f"  Global  entropy={g_e:.4f}  distance={g_d:.1f}")
-        print(f"  SWA     entropy={s_e:.4f}  distance={s_d:.1f}")
+            g_e = np.mean([s['entropy']  for i, s in layer_stats.items() if i in global_set])
+            s_e = np.mean([s['entropy']  for i, s in layer_stats.items() if i in swa_set])
+            g_d = np.mean([s['distance'] for i, s in layer_stats.items() if i in global_set])
+            s_d = np.mean([s['distance'] for i, s in layer_stats.items() if i in swa_set])
+            print(f"    Global entropy={g_e:.4f} dist={g_d:.1f} | "
+                  f"SWA entropy={s_e:.4f} dist={s_d:.1f}")
 
-        del input_ids
-        torch.cuda.empty_cache()
+            del input_ids
+            torch.cuda.empty_cache()
 
     with open(OUT_DIR / 'results.jsonl', 'w') as f:
         for r in all_results:
