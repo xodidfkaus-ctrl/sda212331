@@ -113,14 +113,19 @@ def _load_klue_mrc():
 
 def _load_dart(api_key: str | None = None):
     """
-    Load Korean financial disclosure reports from DART OpenAPI.
-    Returns list of report body strings.
+    Load Korean financial disclosure reports from DART via dart-fss.
+    Returns list of narrative section strings (사업의 내용, 회사 개요 등).
 
+    Requires dart-fss: pip install dart-fss
     Requires DART_API_KEY env var (or pass api_key argument directly).
     Free API, no authentication tier needed for public disclosures.
 
-    Rate limit: 1,000 calls/day. One call per report. We fetch up to 200 reports.
+    Fetches 사업보고서 from ~20 major KOSPI companies.
+    Each report yields ~50 narrative sections, avg ~17,000 chars (~8,500 Korean tokens).
+    One company alone provides enough data for all experiments.
     """
+    import re
+
     key = api_key or os.environ.get('DART_API_KEY', '')
     if not key:
         print("[corpus] DART load skipped: DART_API_KEY not set. "
@@ -128,55 +133,83 @@ def _load_dart(api_key: str | None = None):
         return []
 
     try:
-        import urllib.request
-        import urllib.parse
+        import dart_fss as dart
+        dart.set_api_key(api_key=key)
     except ImportError:
-        print("[corpus] DART load failed: urllib not available")
+        print("[corpus] DART load failed: dart-fss not installed. "
+              "Run: pip install dart-fss")
         return []
+
+    import time
+
+    # 주요 KOSPI 기업 고유번호 (사업보고서가 길고 서술 풍부한 대형사)
+    CORP_CODES = [
+        '00126380',  # 삼성전자
+        '00164779',  # SK하이닉스
+        '00401731',  # LG전자
+        '00164742',  # 현대자동차
+        '00293886',  # NAVER
+        '00131128',  # 카카오
+        '00002789',  # POSCO홀딩스
+        '00104066',  # KB금융
+        '00113994',  # 신한지주
+        '00138294',  # 하나금융지주
+    ]
+
+    # 서술형 핵심 섹션 키워드 (이 단어가 title에 포함된 페이지만 수집)
+    TARGET_KEYWORDS = ['사업의 내용', '사업의개요', '회사의 개요', '위험관리',
+                       '주요 제품', '연구개발', '사업 개요', '경영진']
+    # 재무제표/감사 관련 페이지 제외
+    SKIP_KEYWORDS = ['재무상태표', '손익계산서', '현금흐름표', '자본변동표',
+                     '주석', '감사보고서', '이사회', '내부회계', '연결재무',
+                     '별도재무', '독립된', '감사인']
+    MIN_SECTION_CHARS = 2000
+    REQUEST_DELAY = 1.0  # DART 서버 rate limit 방지
 
     texts = []
-
-    # Step 1: fetch recent annual report list (사업보고서, pblntf_ty=A)
-    list_url = (
-        "https://opendart.fss.or.kr/api/list.json?"
-        + urllib.parse.urlencode({
-            'crtfc_key': key,
-            'pblntf_ty': 'A',   # 사업보고서 (annual report)
-            'page_count': 40,
-            'page_no': 1,
-        })
-    )
-    try:
-        with urllib.request.urlopen(list_url, timeout=15) as resp:
-            data = json.loads(resp.read())
-        if data.get('status') != '000':
-            print(f"[corpus] DART list API error: {data.get('message', data.get('status'))}")
-            return []
-        reports = data.get('list', [])
-        print(f"[corpus] DART: fetched {len(reports)} report entries")
-    except Exception as e:
-        print(f"[corpus] DART list fetch failed: {e}")
-        return []
-
-    # Step 2: for each report, fetch full document text
-    for report in reports[:200]:  # cap at 200 to stay within rate limit
-        rcept_no = report.get('rcept_no', '')
-        if not rcept_no:
-            continue
-        doc_url = (
-            "https://opendart.fss.or.kr/api/document.json?"
-            + urllib.parse.urlencode({'crtfc_key': key, 'rcept_no': rcept_no})
-        )
+    for corp_code in CORP_CODES:
         try:
-            with urllib.request.urlopen(doc_url, timeout=15) as resp:
-                doc_data = json.loads(resp.read())
-            body = doc_data.get('body', '')
-            if len(body) >= 1000:
-                texts.append(body)
-        except Exception:
-            pass  # skip individual failures silently
+            results = dart.search(
+                corp_code=corp_code,
+                bgn_de='20230101',
+                end_de='20241231',
+                pblntf_ty='A',
+                last_reprt_at='Y',
+            )
+            annual = [r for r in results if '사업보고서' in (r.report_nm or '')]
+            if not annual:
+                print(f"[corpus] DART {corp_code}: 사업보고서 없음")
+                continue
 
-    print(f"[corpus] DART loaded: {len(texts):,} reports")
+            report = annual[0]
+            pages = report.pages
+            corp_sections = 0
+
+            for p in pages:
+                title = p.title or ''
+                if any(kw in title for kw in SKIP_KEYWORDS):
+                    continue
+                # 서술형 핵심 섹션 우선, 없으면 재무제표 제외 전체
+                time.sleep(REQUEST_DELAY)
+                try:
+                    html = p.html
+                except Exception:
+                    continue
+                if not html:
+                    continue
+                clean = re.sub(r'<[^>]+>', ' ', str(html))
+                clean = re.sub(r'\s+', ' ', clean).strip()
+                if len(clean) >= MIN_SECTION_CHARS:
+                    texts.append(clean)
+                    corp_sections += 1
+
+            print(f"[corpus] DART {corp_code} ({report.report_nm}): "
+                  f"{corp_sections} sections, total={len(texts)}")
+        except Exception as e:
+            print(f"[corpus] DART {corp_code} failed: {e}")
+            continue
+
+    print(f"[corpus] DART total: {len(texts):,} sections")
     return texts
 
 

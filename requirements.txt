@@ -3,6 +3,7 @@ transformers>=4.40.0
 safetensors>=0.4.0
 huggingface_hub>=0.22.0
 datasets>=2.18.0
+dart-fss>=0.4.0  # DART 한국어 코퍼스용 — 로컬 환경 전용 (클라우드 IP 차단)
 numpy>=1.24.0
 matplotlib>=3.7.0
 scipy>=1.11.0
