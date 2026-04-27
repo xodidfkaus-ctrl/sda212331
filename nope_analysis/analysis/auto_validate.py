@@ -248,10 +248,16 @@ def _verdict(
     accept = criteria.get("accept", {})
     min_d = accept.get("min_abs_cohen_d", 0.5)
     max_p = accept.get("max_p_holm_corrected", 0.01)
+    is_one_sample = (criteria.get("test_type") == "one_sample") or (n_b == 0)
 
     # Underpowered → always INCONCLUSIVE regardless of p
-    if n_a < min_n or n_b < min_n:
-        return "INCONCLUSIVE"
+    # For one-sample tests, only n_a matters (n_b is 0 by design, not underpowered)
+    if is_one_sample:
+        if n_a < min_n:
+            return "INCONCLUSIVE"
+    else:
+        if n_a < min_n or n_b < min_n:
+            return "INCONCLUSIVE"
 
     abs_d = abs(cohens_d) if not np.isnan(cohens_d) else 0.0
 
@@ -365,19 +371,27 @@ def validate_experiment(
     print(f"{'='*60}")
 
     # 3. Run statistical tests for each comparison
+    from nope_analysis.analysis.statistical_tests import compare_one_sample, report_stats_one_sample
+    is_one_sample = criteria.get("test_type") == "one_sample"
     n_tests = len(comparisons)
     all_stats = []
     raw_p_values = []
 
     for metric, (a_vals, b_vals) in comparisons.items():
-        stat = compare_groups(
-            a_vals, b_vals,
-            label_a=label_a, label_b=label_b,
-            metric=metric,
-        )
-        all_stats.append(stat)
-        raw_p_values.append(stat["p_value"])
-        print(f"  {report_stats(stat)}")
+        if is_one_sample or len(b_vals) == 0:
+            stat = compare_one_sample(a_vals, popmean=0.0, label_a=label_a, metric=metric)
+            all_stats.append(stat)
+            raw_p_values.append(stat["p_value"])
+            print(f"  {report_stats_one_sample(stat)}")
+        else:
+            stat = compare_groups(
+                a_vals, b_vals,
+                label_a=label_a, label_b=label_b,
+                metric=metric,
+            )
+            all_stats.append(stat)
+            raw_p_values.append(stat["p_value"])
+            print(f"  {report_stats(stat)}")
 
     # 4. Apply Holm correction
     if n_tests > 1:

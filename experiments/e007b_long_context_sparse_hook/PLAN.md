@@ -74,18 +74,22 @@ Memory at 8192t: 64 × 8192 × 64 layers × 2 bytes ≈ 67MB (vs. 8192² × 64 �
 
 ## Decision Criteria
 
-```yaml
-primary_metric: attn_distance_divergence
-test: welch_t  # Global vs SWA distance at each length condition
-threshold_p: 0.05
-threshold_effect: 0.5  # Cohen's d (medium)
-min_n_per_condition: 5
-min_conditions_significant: 2  # per RQ3 operational definition (Section 2b)
-verdict_logic:
-  VALIDATED: significant divergence (p<0.05, d>0.5) at >= 2 length conditions >= 4096t
-  FAILED: no significant divergence at any beyond-window condition
-  INCONCLUSIVE: n < 5 at any tested beyond-window condition, or all OOM
+```criteria
+metric: attn_distance_divergence
+direction: global_nope > swa
+accept:
+  min_abs_cohen_d: 0.5
+  max_p_holm_corrected: 0.05
+min_n_per_group: 5
+n_simultaneous_tests: 5
+bootstrap_n: 2000
 retrofitted: false
+reject_null_if:
+  min_layers_significant: 2
+note: |
+  5 comparisons (one per length condition). Null rejected if >= 2 show
+  significant divergence (d>0.5, p_holm<0.05). min_n_per_group=5 is
+  memory-constrained maximum; results remain exploratory if n<10.
 ```
 
 ## VRAM budget

@@ -71,6 +71,55 @@ def compare_groups(a, b, label_a='global_nope', label_b='swa', metric='value'):
     }
 
 
+def cohens_dz(deltas):
+    """Cohen's d_z for one-sample / paired design: mean(delta) / std(delta)."""
+    d = np.asarray(deltas, dtype=float)
+    if len(d) < 2:
+        return float('nan')
+    sd = d.std(ddof=1)
+    return float(d.mean() / sd) if sd > 0 else float('nan')
+
+
+def compare_one_sample(values, popmean=0.0, label_a='treatment', metric='value'):
+    """One-sample t-test: tests if mean(values) != popmean. Reports Cohen's d_z."""
+    a = np.asarray(values, dtype=float)
+    t_stat, p_value = scipy_stats.ttest_1samp(a, popmean=popmean)
+    dz = cohens_dz(a - popmean)
+    ci = bootstrap_ci(a)
+    return {
+        'metric': metric,
+        'label_a': label_a,
+        'label_b': f'null_mu={popmean}',
+        'n_a': int(len(a)),
+        'n_b': 0,
+        'mean_a': float(a.mean()),
+        'mean_b': float(popmean),
+        'std_a': float(a.std(ddof=1)) if len(a) > 1 else float('nan'),
+        'std_b': 0.0,
+        'diff_a_minus_b': float(a.mean() - popmean),
+        't_stat': float(t_stat),
+        'p_value': float(p_value),
+        'cohens_d': dz,
+        'ci_a_95': list(ci),
+        'ci_b_95': [float(popmean), float(popmean)],
+        'significant': bool(p_value < 0.05),
+        'effect_size_label': _effect_label(abs(dz)) if not np.isnan(dz) else 'nan',
+        'test_type': 'one_sample_t',
+    }
+
+
+def report_stats_one_sample(result: dict) -> str:
+    """Human-readable one-liner for a compare_one_sample result."""
+    sig = '✓ significant' if result['significant'] else '✗ not significant'
+    return (
+        f"[{result['metric']}] mean={result['mean_a']:.4f}±{result['std_a']:.4f} "
+        f"vs null={result['mean_b']}  "
+        f"diff={result['diff_a_minus_b']:+.4f}  "
+        f"t={result['t_stat']:.3f}  p={result['p_value']:.4f}  "
+        f"d_z={result['cohens_d']:.3f}({result['effect_size_label']})  {sig}"
+    )
+
+
 def _effect_label(d):
     if np.isnan(d):
         return 'nan'

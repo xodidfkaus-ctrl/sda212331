@@ -69,16 +69,16 @@ If OOM, document as Note (does not affect primary within-window result).
 
 ## Decision Criteria
 
-```yaml
-primary_metric: delta_nll
-test: one_sample_t  # one-sample t-test on per-sequence delta_nll, μ=0
-threshold_p: 0.05
-threshold_effect: 0.3  # Cohen's d_z (medium)
-min_n: 50
-verdict_logic:
-  VALIDATED: p < 0.05 AND d_z > 0.3 AND n >= 50
-  FAILED: p >= 0.05 OR d_z <= 0.3
-  INCONCLUSIVE: n < 50 (OOM or corpus failure)
+```criteria
+metric: delta_nll
+direction: delta > 0
+test_type: one_sample
+accept:
+  min_abs_cohen_d: 0.3
+  max_p_holm_corrected: 0.05
+min_n_per_group: 50
+n_simultaneous_tests: 1
+bootstrap_n: 2000
 retrofitted: false
 ```
 

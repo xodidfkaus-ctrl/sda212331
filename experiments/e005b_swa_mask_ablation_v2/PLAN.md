@@ -72,17 +72,21 @@ Global's unrestricted attention provides causal benefit for long-range dependenc
 
 ## Decision Criteria
 
-```yaml
-primary_metric: delta_nll_beyond_window  # mean delta NLL at token positions > 4096
-test: one_sample_t  # on per-sequence mean delta_nll at beyond-window positions, μ=0
-threshold_p: 0.05
-threshold_effect: 0.5  # Cohen's d_z (medium, per RQ3 operational definition Section 2b)
-min_n: 10  # beyond-window sequences
-verdict_logic:
-  VALIDATED: p < 0.05 AND d_z > 0.5 AND n >= 10
-  FAILED: p >= 0.05 OR d_z <= 0.5 (with n >= 10)
-  INCONCLUSIVE: n < 10 (OOM prevents beyond-window measurement)
+```criteria
+metric: delta_nll_beyond_window
+direction: delta > 0
+test_type: one_sample
+accept:
+  min_abs_cohen_d: 0.5
+  max_p_holm_corrected: 0.05
+min_n_per_group: 10
+n_simultaneous_tests: 1
+bootstrap_n: 2000
 retrofitted: false
+note: |
+  Primary metric: mean per-sequence delta_nll at token positions > 4096.
+  min_n_per_group=10 is the minimum for beyond-window sequences;
+  if OOM prevents collecting 10 sequences, verdict is INCONCLUSIVE.
 ```
 
 ## VRAM budget
