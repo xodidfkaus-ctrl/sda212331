@@ -794,6 +794,14 @@ Needle-in-a-haystack retrieval at 4,096–8,192 tokens: insert a key-value fact 
 
 ---
 
-*Last updated: 2026-04-26 (session 2) — e005 (SWA mask ablation) run → INCONCLUSIVE: OOM at seq_len ≥ 5120 on A100 80GB PCIe prevented all beyond-window measurements. Full results in experiments/e005_swa_mask_ablation/ANALYSIS.md; redesign options documented there. Pre-registration infrastructure completed (bd9b933 + 4dbbee4 + f42305c): force_verdict, min_layers_significant enforcement, timestamp ordering, Operating Persona. R6 architectural fact-verification rule added to CLAUDE.md; papers/MODEL_FACTS.md and papers/model_card_EXAONE-4.5-33B.md now committed. All findings in EXPERIMENT_LOG.md and FINDINGS.md.*
+*Last updated: 2026-04-27 (session 3) — GPU upgraded to 2× A100 80GB PCIe (170GB total) for next session. e006 FAILED (test selection error: paired data tested as independent groups; beyond-window n=0). e007 INCONCLUSIVE (output_attentions=True OOM after 1 sample at 2048t). All 3 RQ3 conditions exhausted without beyond-window data. test_images/ added (51 images, 5 categories for Topic E). bypassPermissions set in ~/.claude/settings.json. Next: e007b (Q·K sparse hook, stride=128, no output_attentions) + e006b (paired t-test pre-registered). Full details in each experiment's ANALYSIS.md.*
+
+### Hardware upgrade note (2026-04-27)
+Previous environment: 1× A100 80GB PCIe, 16 vCPU, 192 GiB RAM.
+**New environment: 2× A100 80GB PCIe, 32 vCPU, 384 GiB RAM.**
+`device_map='auto'` in `nope_analysis/loader.py` handles 2-GPU split automatically — no code changes needed.
+CUDA version on new machine: verify with `nvidia-smi` before installing torch (Step C).
+
+*Previous: 2026-04-26 (session 2) — e005 (SWA mask ablation) run → INCONCLUSIVE: OOM at seq_len ≥ 5120 on A100 80GB PCIe prevented all beyond-window measurements. Full results in experiments/e005_swa_mask_ablation/ANALYSIS.md; redesign options documented there. Pre-registration infrastructure completed (bd9b933 + 4dbbee4 + f42305c): force_verdict, min_layers_significant enforcement, timestamp ordering, Operating Persona. R6 architectural fact-verification rule added to CLAUDE.md; papers/MODEL_FACTS.md and papers/model_card_EXAONE-4.5-33B.md now committed. All findings in EXPERIMENT_LOG.md and FINDINGS.md.*
 
 *Previous: 2026-04-26 (session 1) — Scientific audit applied: fixed RQ1 logical leap (H1/H2 distinction, Exp 2c added), added Exp 2b reliability warning, corrected Exp 1b "meaningful reversal" to require statistical test, added RQ3 operational definition (Section 2b), added related architecture positioning note (Section 2), added computational scope section (Section 10), converted Korean setup sections to English, added design rules 9-10.*
