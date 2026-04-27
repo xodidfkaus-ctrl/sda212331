@@ -77,12 +77,41 @@ Install torch based on detected CUDA driver version:
 cd "$HOME/sda212331"
 pip install -r requirements.txt -q
 pip install git+https://github.com/nuxlear/transformers.git@add-exaone4_5 -q
-# Install torch per Step C result (Elice baseline: cu121)
-pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu121 -q
+# Install torch per Step C result (confirmed 2026-04-27: CUDA driver 12.4 → cu124)
+pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu124 -q
 ```
 
 > **Why the nuxlear fork?** The `exaone4_5` module is not in PyPI transformers. Only the `add-exaone4_5` branch of the nuxlear fork includes it.
 > `requirements.txt` lists `transformers>=4.40.0` which does not satisfy this — always install the fork separately.
+
+> **CUDA version history**: Elice baseline was cu121 (CUDA 12.2, confirmed 2026-04-26). As of 2026-04-27 the environment shows CUDA 12.4 — use cu124. Always run Step C first to confirm before installing torch.
+
+---
+
+### Step D.5 — Corpus cache build (required every session)
+
+The corpus cache (`nope_analysis/corpus/cache/`) is **not committed to git** and is deleted on every session reset. Without it, experiment scripts fall back to synthetic repeated text (as happened in e005), which produces near-zero perplexity and masks any ablation effect.
+
+```bash
+cd "$HOME/sda212331"
+python3 -c "from nope_analysis.corpus.downloader import download_all; download_all()"
+```
+
+Expected output:
+```
+Pre-downloading corpora...
+[corpus] WikiText-103 loaded: 699,876 passages
+[corpus] Cached en corpus to .../corpus/cache/en.json
+  en: 699,876 passages cached
+[corpus] KLUE-MRC loaded: 17,554 passages
+[corpus] Cached ko corpus to .../corpus/cache/ko.json
+  ko: 17,554 passages cached
+Done.
+```
+
+**Runtime**: ~2–3 minutes (network download from HuggingFace).
+**Disk**: ~540MB total (en.json 499MB + ko.json 41MB).
+**Why not committed to git**: 540MB exceeds GitHub file size limits. The `datasets` library (added to `requirements.txt` 2026-04-27) handles download automatically.
 
 ---
 
@@ -165,6 +194,7 @@ Push any results from the previous session that were not pushed.
 | VRAM >= 40GB | GPU output | memory >= 40GB |
 | Loader import | `from nope_analysis import loader` | No error |
 | Model cache | `ls model_cache/.../snapshots/` | Folder exists |
+| Corpus cache | `ls nope_analysis/corpus/cache/` | `en.json` and `ko.json` present |
 
 ---
 
@@ -252,10 +282,24 @@ python3 -c "from nope_analysis.loader import load_config; cfg = load_config(); p
 ```bash
 pip install -r requirements.txt -q
 pip install git+https://github.com/nuxlear/transformers.git@add-exaone4_5 -q
-pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu121 -q
+pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu124 -q
 ```
 > **Why the nuxlear fork?** PyPI transformers does not include `exaone4_5` yet. The nuxlear fork adds `Exaone4_5_ForConditionalGeneration`.
-> **Why torch cu121?** The environment has CUDA driver 12.2 (535.x). torch>=2.6 ships cu124/cu126 which requires driver 12.4+. torch 2.5.1+cu121 is the highest version compatible with this driver.
+> **Why torch cu124?** As of 2026-04-27 the environment has CUDA driver 12.4. Use cu124. Always check `nvidia-smi` first — driver version determines the correct index URL.
+
+---
+
+### Step 3.5 — Corpus cache build (required every session)
+
+The experiment corpus cache is deleted on session reset. Without it, scripts fall back to synthetic text (PPL ≈ 1.07), which masks ablation effects (root cause of e005 ΔNLL = 0).
+
+```bash
+cd "$HOME/sda212331"
+python3 -c "from nope_analysis.corpus.downloader import download_all; download_all()"
+```
+
+**Expected output**: `en: 699,876 passages cached` and `ko: 17,554 passages cached`.
+**Runtime**: ~2–3 minutes. **Disk**: ~540MB (not committed to git).
 
 ---
 
@@ -297,6 +341,7 @@ If there are unpushed results from the previous session, push them first.
 | GPU count | `python3 -c "import torch; print(torch.cuda.device_count())"` | `1` |
 | Model cache | `ls model_cache/models--LGAI-EXAONE--EXAONE-4.5-33B/snapshots/` | folder exists |
 | Dependencies | `python3 -c "from nope_analysis.loader import load_config; load_config()"` | no error |
+| Corpus cache | `ls nope_analysis/corpus/cache/` | `en.json` and `ko.json` present |
 | Git auth | `git push --dry-run 2>&1` | no error |
 | Git sync | `git status` | no unpushed results |
 
