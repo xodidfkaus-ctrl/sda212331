@@ -110,9 +110,12 @@ def run_with_hooks(model, input_ids, global_set):
     # hook 등록
     handles = []
     try:
-        layers = model.language_model.model.layers
+        layers = model.model.language_model.layers
     except AttributeError:
-        layers = model.model.layers
+        try:
+            layers = model.language_model.layers
+        except AttributeError:
+            layers = model.model.layers
 
     for i, layer in enumerate(layers):
         h = layer.self_attn.register_forward_hook(make_hook(i))

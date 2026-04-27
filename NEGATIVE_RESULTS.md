@@ -70,6 +70,23 @@ expected, not a failure of the hypothesis.
 
 ---
 
+### [e006] Global zero-output ablation — FAILED by independent Welch test (test selection error)
+
+**Original prediction**: Zeroing Global layer self-attention output causes statistically significant perplexity increase (H3c_alt); pre-registered threshold: Cohen's d > 0.5, p_holm < 0.01, n ≥ 20.
+
+**Result**: Welch independent-groups t-test: t=1.587, p=0.121, d=0.502 — **not significant**.
+Post-hoc paired analysis (exploratory): t=30.15, p=1.65e-17, d_z=6.74 — strongly significant, but conducted after FAILED verdict.
+
+**Why rejected (per Rule R5)**: The pre-registered comparison was called as independent groups, which is wrong for a paired experiment. Text-to-text PPL variance (~0.28 nats) swamped the treatment effect (~0.14 nats) in the denominator. The FAILED verdict was upheld per Rule R5 — changing the test after a FAILED result is p-hacking.
+
+**Critical secondary limitation**: beyond_swa_window n=0 (OOM at ≥5120 tokens). All 20 measurements were within the SWA window — the experiment did not test the scientific question of interest (long-range dependency beyond 4,096 tokens).
+
+**Implication**: The within-window direction is clear and consistent (ΔNLL > 0 for all 20 samples, d_z=6.74 by paired analysis). Global attention contributes to prediction within the SWA window. The confirmatory claim for RQ3 (beyond-window effect) requires e006b with (1) paired t-test pre-registered, (2) OOM mitigation for seq_len > 4,096.
+
+**Source**: `outputs/exp3_swa_ablation/stats.json` — `overall_verdict: "FAILED"`. Full analysis: `experiments/e006_global_zero_ablation/ANALYSIS.md`.
+
+---
+
 ## 2. Aborted Experiments
 
 ### [pre-e005] Initial Exp 3b run — OOM at seq_len = 6144 on A100 MIG 3g.40gb (40GB)

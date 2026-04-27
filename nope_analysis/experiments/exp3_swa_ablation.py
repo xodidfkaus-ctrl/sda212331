@@ -100,15 +100,18 @@ def register_ablation_hooks(model, global_layers):
             return (zeroed,) + output[1:]
         return hook
 
-    # 모델 구조 탐색: language_model.model.layers[i].self_attn
+    # EXAONE4_5: model.model.language_model.layers
     try:
-        layers = model.language_model.model.layers
+        layers = model.model.language_model.layers
     except AttributeError:
         try:
-            layers = model.model.layers
+            layers = model.language_model.layers
         except AttributeError:
-            print("⚠️ 레이어 접근 실패 — 모델 구조 확인 필요")
-            return handles
+            try:
+                layers = model.model.layers
+            except AttributeError:
+                print("⚠️ Layer access failed — check model structure")
+                return handles
 
     for i in global_set:
         if i < len(layers):
@@ -147,13 +150,23 @@ def run():
             input_ids = input_ids.to(model.device)
             print(f"corpus={corpus_lang}", end="  ")
 
-            # 조건 A: 베이스라인
-            ppl_base, nll_base = compute_perplexity(model, input_ids)
+            handles = []
+            try:
+                # Condition A: baseline
+                ppl_base, nll_base = compute_perplexity(model, input_ids)
 
-            # 조건 B: Global ablation
-            handles = register_ablation_hooks(model, global_layers)
-            ppl_ablated, nll_ablated = compute_perplexity(model, input_ids)
-            remove_hooks(handles)
+                # Condition B: Global ablation
+                handles = register_ablation_hooks(model, global_layers)
+                ppl_ablated, nll_ablated = compute_perplexity(model, input_ids)
+                remove_hooks(handles)
+                handles = []
+            except RuntimeError as e:
+                if 'out of memory' in str(e).lower():
+                    print(f"  OOM at len={target_len} sample={sample_idx} — skipping remaining samples at this length")
+                    remove_hooks(handles)
+                    torch.cuda.empty_cache()
+                    break
+                raise
 
             delta_nll = nll_ablated - nll_base
             delta_ppl = ppl_ablated - ppl_base

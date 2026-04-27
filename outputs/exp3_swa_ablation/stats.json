@@ -1,0 +1,49 @@
+{
+  "experiment_id": "e006",
+  "plan_path": "/home/elicer/sda212331/experiments/e006_global_zero_ablation/PLAN.md",
+  "retrofitted": false,
+  "overall_verdict": "FAILED",
+  "n_comparisons": 1,
+  "criteria": {
+    "metric": "perplexity_delta",
+    "direction": "ablated > baseline",
+    "accept": {
+      "min_abs_cohen_d": 0.5,
+      "max_p_holm_corrected": 0.01
+    },
+    "min_n_per_group": 20,
+    "n_simultaneous_tests": 1,
+    "bootstrap_n": 10000,
+    "retrofitted": false
+  },
+  "comparisons": [
+    {
+      "metric": "perplexity_delta",
+      "label_a": "ablated",
+      "label_b": "baseline",
+      "n_a": 20,
+      "n_b": 20,
+      "mean_a": 2.1367200374603272,
+      "mean_b": 1.9960425674915314,
+      "std_a": 0.27921960394450296,
+      "std_b": 0.28125337312711823,
+      "diff_a_minus_b": 0.14067746996879582,
+      "t_stat": 1.5874388597024556,
+      "p_value": 0.12070093116891062,
+      "cohens_d": 0.501992244292024,
+      "ci_a_95": [
+        2.0101901978254317,
+        2.253438309431076
+      ],
+      "ci_b_95": [
+        1.8677336584031583,
+        2.1127485439181326
+      ],
+      "significant": false,
+      "effect_size_label": "medium",
+      "p_holm": 0.12070093116891062,
+      "n_tests_total": 1,
+      "verdict": "FAILED"
+    }
+  ]
+}
