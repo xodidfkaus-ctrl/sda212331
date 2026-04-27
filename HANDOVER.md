@@ -77,14 +77,17 @@ Install torch based on detected CUDA driver version:
 cd "$HOME/sda212331"
 pip install -r requirements.txt -q
 pip install git+https://github.com/nuxlear/transformers.git@add-exaone4_5 -q
-# Install torch per Step C result (confirmed 2026-04-27: CUDA driver 12.4 → cu124)
-pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu124 -q
+pip install accelerate -q
+# Install torch per Step C result (confirmed 2026-04-27 session 4: CUDA driver 12.2 → cu121)
+pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu121 -q
 ```
 
 > **Why the nuxlear fork?** The `exaone4_5` module is not in PyPI transformers. Only the `add-exaone4_5` branch of the nuxlear fork includes it.
 > `requirements.txt` lists `transformers>=4.40.0` which does not satisfy this — always install the fork separately.
 
-> **CUDA version history**: Elice baseline was cu121 (CUDA 12.2, confirmed 2026-04-26). As of 2026-04-27 the environment shows CUDA 12.4 — use cu124. Always run Step C first to confirm before installing torch.
+> **Why accelerate?** `device_map='auto'` (required for 2-GPU model split) raises `ValueError` without `accelerate`. Must install every session — confirmed missing on session 4 startup.
+
+> **CUDA version history**: Elice baseline was cu121 (CUDA 12.2, confirmed 2026-04-26). Session 3 noted CUDA 12.4 (cu124). Session 4 (2026-04-27) reverted to CUDA 12.2 — use cu121. Always run Step C first.
 
 ---
 
@@ -794,9 +797,50 @@ Needle-in-a-haystack retrieval at 4,096–8,192 tokens: insert a key-value fact 
 
 ---
 
-*Last updated: 2026-04-27 (session 3) — GPU upgraded to 2× A100 80GB PCIe (170GB total) for next session. e006 FAILED (test selection error: paired data tested as independent groups; beyond-window n=0). e007 INCONCLUSIVE (output_attentions=True OOM after 1 sample at 2048t). All 3 RQ3 conditions exhausted without beyond-window data. test_images/ added (51 images, 5 categories for Topic E). bypassPermissions set in ~/.claude/settings.json. Next: e007b (Q·K sparse hook, stride=128, no output_attentions) + e006b (paired t-test pre-registered). Full details in each experiment's ANALYSIS.md.*
+*Last updated: 2026-04-27 (session 4) — e006b RUNNING (one-sample paired delta_nll design, n=50). e007b + e005b scripts written and pre-registered but NOT yet run. Next session: check e006b result → run e007b → run e005b. Full details below.*
 
-### Hardware upgrade note (2026-04-27)
+### Session 4 summary (2026-04-27)
+
+**Hardware confirmed**: 2× A100 80GB PCIe (85.2GB each), 32 vCPU, 1082GB RAM.
+CUDA driver: 12.2 → torch cu121 (reverted from session 3's cu124).
+
+**Infrastructure changes this session**:
+- `accelerate` added to install sequence (required for `device_map='auto'` on 2-GPU setup)
+- `nope_analysis/analysis/statistical_tests.py`: added `compare_one_sample`, `cohens_dz`, `report_stats_one_sample`
+- `nope_analysis/analysis/auto_validate.py`: one-sample t-test support (`test_type: one_sample` in criteria block; `n_b=0` bypasses n_b check in `_verdict`)
+- `nope_analysis/seeds.py`: registered e005b, e006b, e007b
+- `~/.claude/settings.json`: `permissions.defaultMode = bypassPermissions` (no more permission prompts)
+
+**New experiments pre-registered** (PLAN.md committed, scripts written):
+| ID | Directory | Script | Status |
+|----|-----------|--------|--------|
+| e006b | experiments/e006b_global_zero_ablation_v2/ | exp3_global_zero_ablation_v2.py | **RUNNING** |
+| e007b | experiments/e007b_long_context_sparse_hook/ | exp4_long_context_sparse_hook.py | PENDING |
+| e005b | experiments/e005b_swa_mask_ablation_v2/ | exp3b_swa_mask_ablation_v2.py | PENDING |
+
+**New test images added** (for Topic E — Vision × NoPE):
+- `test_images/ko_math/` — 29 Korean math problem images
+- `test_images/en_math/` — 13 English math problem images
+- `test_images/en_graph/` — 19 English graph/chart images
+- Previous: `test_images/반도체 도면 1/`, `반도체 도면 2/` (2 items, from session 3)
+
+**e006b design** (fixes e006 FAILED):
+- Paired one-sample t-test on per-sequence delta_nll (μ=0)
+- n=50 sequences (10 per length: 2048/3072/4096/5120/6144t)
+- Expected to VALIDATE: post-hoc from e006 showed t=30.15, d_z=6.74
+
+**Next session — run in order**:
+1. Check e006b result + write ANALYSIS.md
+2. Run e007b: `python3 nope_analysis/experiments/exp4_long_context_sparse_hook.py`
+3. Run e005b: `python3 nope_analysis/experiments/exp3b_swa_mask_ablation_v2.py`
+4. If all 3 RQ3 conditions met → draft paper outline (see RQ3 operational definition Section 2b)
+5. e008 (delta probe): script NOT yet written — needs to be written before running
+
+### Hardware note (2026-04-27 session 4)
+Confirmed environment: 2× A100 80GB PCIe (85.2GB each), 32 vCPU, 1082GB RAM.
+CUDA 12.2 → use cu121. `device_map='auto'` splits model across both GPUs automatically.
+
+### Hardware note (2026-04-27 session 3 — original)
 Previous environment: 1× A100 80GB PCIe, 16 vCPU, 192 GiB RAM.
 **New environment: 2× A100 80GB PCIe, 32 vCPU, 384 GiB RAM.**
 `device_map='auto'` in `nope_analysis/loader.py` handles 2-GPU split automatically — no code changes needed.
