@@ -32,6 +32,8 @@ EXPERIMENT_SEEDS: dict[str, int] = {
     "e005b": 42,
     "e006b": 42,
     "e007b": 42,
+    "e009": 42,
+    "e010": 42,
 }
 
 
