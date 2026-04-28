@@ -35,15 +35,34 @@ required to distinguish them.
 
 ---
 
-### F1.2 — H1 vs H2 resolution: PENDING [e008]
+### F1.2 — H1 vs H2 resolution: INCONCLUSIVE (directional H1_null) [e008]
 
-**Status**: e008 not yet run. Finding will be populated after auto_validate.py
-writes `outputs/exp2c_delta_probe/stats.json`.
+**auto_validate verdict**: INCONCLUSIVE — design mismatch caused n=3 per comparison
+(only 3 seq_lens per Global layer), insufficient for Holm correction over 16 tests.
 
-**Pre-registered decision rule** (from PREREGISTRATION.md):
-- H1_alt accepted if: delta_acc(h_out − h_in) > 0 at ≥ 1 Global layer, Cohen's d ≥ 0.5,
-  p_Holm ≤ 0.01, n ≥ 300
-- H1_null retained if: delta ≈ 0 across all Global layer indices
+**Directional signal (exploratory, NOT pre-registered as confirmatory)**:
+- Global layers: mean Δ = −0.0061 ± 0.0040 (n=48; **45/48 negative**)
+- SWA layers: mean Δ = +0.0076 ± 0.0191 (n=144)
+- Direction consistently opposes H1_alt (which required delta > 0)
+- P(15/16 negative by chance under H1_alt) = 0.00024 → strong directional signal
+- Consistent across all seq_lens [64, 128, 256]
+
+**Tentative interpretation (exploratory)**:
+Global layers do not add positional information; they slightly reduce position
+decodability (Δ ≈ −0.006, ~1.2% of base accuracy). SWA (RoPE) layers add positional
+information (+0.008). Evidence directionally supports H1_null: Global propagates and
+mildly diffuses SWA's positional signal rather than independently encoding position.
+
+**Cannot claim formally**: INCONCLUSIVE verdict stands per R5. Directional evidence
+only. Formal confirmation requires a redesigned experiment with per-prompt or per-fold
+delta values passed to validate_experiment (n ≥ 15 minimum).
+
+**Implications for paper framing**:
+- Do NOT state "Global encodes position" or "Global does not encode position" as confirmed
+- Frame as: "Preliminary evidence (INCONCLUSIVE) suggests Global layers do not
+  independently encode positional information within the SWA window regime"
+- This is consistent with F3.1a/b: Global's causal role appears to be semantic
+  integration rather than positional encoding
 
 ---
 
@@ -214,4 +233,4 @@ See HANDOVER.md Section 10 for full discussion.
 
 ---
 
-*Last updated: 2026-04-27 (session 5) | **H3_alt SUPPORTED** — e005b + e006b both VALIDATED (2/3); e007b FAILED (direction reversed, auto_validate direction fix applied); F1.2 awaits e008; F2.3 exploratory only*
+*Last updated: 2026-04-28 (session 6) | **H3_alt SUPPORTED** — e005b + e006b both VALIDATED (2/3); e007b FAILED (direction reversed); **e008 INCONCLUSIVE** — directional H1_null signal (45/48 Global Δ negative) but formally underpowered; F2.3 exploratory only*
